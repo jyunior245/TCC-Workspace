@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Usuário</title>
+    <style>
+        body { font-family: Arial; background: #f4f4f4; }
+        .container { width: 300px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; }
+        input { width: 100%; padding: 8px; margin: 8px 0; }
+        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; }
+        a { text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Criar Conta</h2>
+
+    <form action="/register" method="POST">
+        <input type="text" name="name" placeholder="Nome completo" required>
+        <input type="text" name="username" placeholder="Nome de Usuário" required>
+        <input type="email" name="email" placeholder="E-mail" required>
+        <input type="password" name="password" placeholder="Senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <p style="text-align:center; margin-top:10px;">
+        <a href="/login">Já tenho uma conta</a>
+    </p>
+</div>
+
+</body>
+</html>
