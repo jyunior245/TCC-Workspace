@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Title } from 'react-native-paper';
+import { LoginViewModel } from '../viewmodels/LoginViewModel';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // Mock login
-    console.log('Login:', email, password);
-    navigation.replace('Home');
+  const vm = new LoginViewModel();
+
+  const handleLogin = async () => {
+    const result = await vm.loginAndRoute(email, password);
+    navigation.replace(result.route);
   };
 
   return (
@@ -31,7 +33,7 @@ export default function LoginScreen({ navigation }: any) {
       <Button mode="contained" onPress={handleLogin} style={styles.button}>
         Entrar
       </Button>
-      <Button onPress={() => console.log('Register')} style={styles.link}>
+      <Button onPress={() => navigation.navigate('Register')} style={styles.link}>
         Criar conta
       </Button>
     </View>

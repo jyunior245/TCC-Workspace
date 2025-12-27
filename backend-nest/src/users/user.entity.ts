@@ -11,8 +11,8 @@ export class User {
   @Column()
   password?: string;
 
-  @Column({ default: 'user' })
-  role: string; // 'user' | 'acs' | 'admin'
+  @Column({ type: 'varchar' })
+  role: 'PATIENT' | 'ACS';
 
   @Column({ nullable: true })
   name: string;
