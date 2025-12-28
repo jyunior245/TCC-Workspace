@@ -11,9 +11,20 @@ export default function RegisterScreen({ navigation }: any) {
 
   const vm = new RegisterViewModel();
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleRegister = async () => {
-    await vm.register(email, password, name, role);
-    navigation.replace('Login');
+    setLoading(true);
+    setError(null);
+    try {
+      await vm.register(email, password, name, role);
+      navigation.replace('Login');
+    } catch (e: any) {
+      setError('Falha ao cadastrar. Verifique os dados e tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,9 +39,10 @@ export default function RegisterScreen({ navigation }: any) {
         <RadioButton.Item label="Agente Comunitário de Saúde" value="ACS" />
       </RadioButton.Group>
 
-      <Button mode="contained" onPress={handleRegister} style={styles.button}>
+      <Button mode="contained" onPress={handleRegister} disabled={loading} style={styles.button}>
         Cadastrar
       </Button>
+      {error && <Title style={{ color: 'red', marginTop: 10 }}>{error}</Title>}
     </View>
   );
 }
@@ -52,4 +64,3 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 });
-

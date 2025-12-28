@@ -8,8 +8,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  password?: string;
+  @Column({ nullable: true })
+  firebaseUid?: string;
 
   @Column({ type: 'varchar' })
   role: 'PATIENT' | 'ACS';

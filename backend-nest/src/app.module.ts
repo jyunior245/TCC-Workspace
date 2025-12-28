@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { FirebaseModule } from './firebase/firebase.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { User } from './users/user.entity';
 
@@ -27,6 +28,7 @@ import { User } from './users/user.entity';
     }),
     UsersModule,
     AuthModule,
+    FirebaseModule,
     GatewayModule,
   ],
   controllers: [],

@@ -6,12 +6,22 @@ import { LoginViewModel } from '../viewmodels/LoginViewModel';
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const vm = new LoginViewModel();
 
   const handleLogin = async () => {
-    const result = await vm.loginAndRoute(email, password);
-    navigation.replace(result.route);
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await vm.loginAndRoute(email, password);
+      navigation.replace(result.route);
+    } catch (e: any) {
+      setError('Falha ao entrar. Verifique email/senha.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,12 +40,13 @@ export default function LoginScreen({ navigation }: any) {
         secureTextEntry
         style={styles.input}
       />
-      <Button mode="contained" onPress={handleLogin} style={styles.button}>
+      <Button mode="contained" onPress={handleLogin} disabled={loading} style={styles.button}>
         Entrar
       </Button>
       <Button onPress={() => navigation.navigate('Register')} style={styles.link}>
         Criar conta
       </Button>
+      {error && <Title style={{ color: 'red', marginTop: 10 }}>{error}</Title>}
     </View>
   );
 }

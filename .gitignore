@@ -2,6 +2,8 @@
 .env
 node_modules/
 
+firebase-admin.json
+
 .trae/
 *.pyc
 __pycache__/

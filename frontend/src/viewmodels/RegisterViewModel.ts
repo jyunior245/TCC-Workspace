@@ -7,4 +7,3 @@ export class RegisterViewModel {
     return res.data;
   }
 }
-
