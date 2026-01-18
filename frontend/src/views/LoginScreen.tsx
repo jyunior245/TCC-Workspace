@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Title } from 'react-native-paper';
 import { LoginViewModel } from '../viewmodels/LoginViewModel';
+import { isValidEmail } from '../utils/validators';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -18,6 +19,7 @@ export default function LoginScreen({ navigation }: any) {
       const result = await vm.loginAndRoute(email, password);
       navigation.replace(result.route);
     } catch (e: any) {
+      console.error('Login error:', e);
       setError('Falha ao entrar. Verifique email/senha.');
     } finally {
       setLoading(false);

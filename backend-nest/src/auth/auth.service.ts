@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { FirebaseService } from '../firebase/firebase.service';
@@ -35,12 +35,19 @@ export class AuthService {
   }
 
   async register(userData: any) {
-    const fbUser = await this.firebase.createUser(userData.email, userData.password, userData.name);
-    return this.usersService.create({
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      firebaseUid: fbUser.uid,
-    });
+    try {
+      const fbUser = await this.firebase.createUser(userData.email, userData.password, userData.name);
+      return await this.usersService.create({
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        firebaseUid: fbUser.uid,
+      });
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-exists') {
+        throw new ConflictException('Email already in use');
+      }
+      throw new InternalServerErrorException(error.message);
+    }
   }
 }

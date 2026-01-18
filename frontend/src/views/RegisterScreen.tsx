@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Title, RadioButton } from 'react-native-paper';
 import { RegisterViewModel } from '../viewmodels/RegisterViewModel';
+import { isValidEmail, isValidPassword } from '../utils/validators';
 
 export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -17,11 +18,35 @@ export default function RegisterScreen({ navigation }: any) {
   const handleRegister = async () => {
     setLoading(true);
     setError(null);
+
+    if (!name.trim()) {
+      setError('Por favor, insira seu nome.');
+      setLoading(false);
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError('Email inválido. Verifique o formato (ex: nome@dominio.com).');
+      setLoading(false);
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      setError('A senha deve ter pelo menos 6 caracteres.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await vm.register(email, password, name, role);
       navigation.replace('Login');
     } catch (e: any) {
-      setError('Falha ao cadastrar. Verifique os dados e tente novamente.');
+      console.error('Register error:', e);
+      if (e.response && e.response.status === 409) {
+        setError('Este email já está sendo usado. Tente outro.');
+      } else {
+        setError('Falha ao cadastrar. Verifique os dados e tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
