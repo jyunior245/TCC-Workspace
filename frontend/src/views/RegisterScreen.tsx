@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Title, RadioButton } from 'react-native-paper';
 import { RegisterViewModel } from '../viewmodels/RegisterViewModel';
+import { LoginViewModel } from '../viewmodels/LoginViewModel';
 import { isValidEmail, isValidPassword } from '../utils/validators';
 
 export default function RegisterScreen({ navigation }: any) {
@@ -11,6 +12,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [role, setRole] = useState<'PATIENT' | 'ACS'>('PATIENT');
 
   const vm = new RegisterViewModel();
+  const loginVm = new LoginViewModel();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,14 +34,19 @@ export default function RegisterScreen({ navigation }: any) {
     }
 
     if (!isValidPassword(password)) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
+      setError('A senha deve ter pelo menos 8 caracteres, 1 maiúscula, 1 número e 1 símbolo.');
       setLoading(false);
       return;
     }
 
     try {
       await vm.register(email, password, name, role);
-      navigation.replace('Login');
+      const result = await loginVm.loginAndRoute(email, password);
+      if (result.role === 'ACS') {
+        navigation.replace('ACSProfile', { token: result.token });
+      } else {
+        navigation.replace('PatientProfile', { token: result.token });
+      }
     } catch (e: any) {
       console.error('Register error:', e);
       if (e.response && e.response.status === 409) {

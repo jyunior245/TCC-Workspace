@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Title } from 'react-native-paper';
 import { LoginViewModel } from '../viewmodels/LoginViewModel';
-import { isValidEmail } from '../utils/validators';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -17,10 +16,27 @@ export default function LoginScreen({ navigation }: any) {
     setError(null);
     try {
       const result = await vm.loginAndRoute(email, password);
-      navigation.replace(result.route);
+      const { token, role, profileCompleted } = result;
+      if (profileCompleted) {
+        if (role === 'ACS') {
+          navigation.replace('ACSHome');
+        } else {
+          navigation.replace('PatientHome');
+        }
+      } else {
+        if (role === 'ACS') {
+          navigation.replace('ACSProfile', { token });
+        } else {
+          navigation.replace('PatientProfile', { token });
+        }
+      }
     } catch (e: any) {
       console.error('Login error:', e);
-      setError('Falha ao entrar. Verifique email/senha.');
+      if (e.response && e.response.status === 401) {
+        setError('Email não verificado ou credenciais inválidas.');
+      } else {
+        setError('Falha ao entrar. Tente novamente mais tarde.');
+      }
     } finally {
       setLoading(false);
     }
