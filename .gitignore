@@ -2,16 +2,9 @@
 .env
 node_modules/
 
-./credentials/firebase-admin.json
-
-trae/
-
-backend/credentials/firebase-admin.json
-
-.trae/
 *.pyc
 __pycache__/
-
+backend/credentials/firebase-admin.json
 instance/
 
 .pytest_cache/
