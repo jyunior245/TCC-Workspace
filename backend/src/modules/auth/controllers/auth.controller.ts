@@ -20,6 +20,7 @@ export class AuthController {
         id: user.id,
         email: user.email,
         role: user.role,
+        profileCompleted: user.profileCompleted,
       },
     };
   }
@@ -34,4 +35,3 @@ export class AuthController {
     };
   }
 }
-

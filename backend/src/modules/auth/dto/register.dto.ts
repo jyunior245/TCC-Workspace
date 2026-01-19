@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, IsIn } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsIn, Matches } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -6,6 +6,9 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/, {
+    message: 'Password too weak',
+  })
   password: string;
 
   @IsString()

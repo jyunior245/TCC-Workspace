@@ -27,5 +27,14 @@ export class FirebaseService {
   async createUser(email: string, password: string, displayName?: string) {
     return this.auth().createUser({ email, password, displayName });
   }
-}
 
+  async sendEmailVerification(uid: string) {
+    // Gera link de verificação de email para ser enviado ao usuário
+    const auth = this.auth();
+    const user = await auth.getUser(uid);
+    if (user.email) {
+      return auth.generateEmailVerificationLink(user.email);
+    }
+    return null;
+  }
+}

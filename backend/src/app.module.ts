@@ -6,6 +6,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { FirebaseModule } from './infrastructure/firebase/firebase.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
 import { User } from './modules/users/entities/user.entity';
+import { PatientProfile } from './modules/users/entities/patient-profile.entity';
+import { AcsProfile } from './modules/users/entities/acs-profile.entity';
 
 @Module({
   imports: [
@@ -21,7 +23,7 @@ import { User } from './modules/users/entities/user.entity';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User],
+        entities: [User, PatientProfile, AcsProfile],
         synchronize: true,
       }),
       inject: [ConfigService],
