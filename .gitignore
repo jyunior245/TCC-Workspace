@@ -2,7 +2,11 @@
 .env
 node_modules/
 
-firebase-admin.json
+./credentials/firebase-admin.json
+
+trae/
+
+backend/credentials/firebase-admin.json
 
 .trae/
 *.pyc

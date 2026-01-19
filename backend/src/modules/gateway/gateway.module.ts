@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { GatewayService } from './gateway.service';
-import { GatewayController } from './gateway.controller';
+import { GatewayService } from './services/gateway.service';
+import { GatewayController } from './controllers/gateway.controller';
 
 @Module({
   imports: [HttpModule],

@@ -1,13 +1,13 @@
 services:
   nest-app:
     build:
-      context: ./backend-nest
+      context: ./backend
       dockerfile: Dockerfile
     container_name: nest_app_tcc
     ports:
       - "3000:3000"
     volumes:
-      - ./backend-nest:/app
+      - ./backend:/app
       - /app/node_modules
       - ${FIREBASE_ADMIN_CREDENTIALS_HOST_PATH}:/app/credentials/firebase-admin.json:ro
     env_file:

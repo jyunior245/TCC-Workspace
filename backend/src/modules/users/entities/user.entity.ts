@@ -17,3 +17,4 @@ export class User {
   @Column({ nullable: true })
   name: string;
 }
+

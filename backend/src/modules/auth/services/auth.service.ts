@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../../users/services/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { FirebaseService } from '../firebase/firebase.service';
+import { FirebaseService } from '../../../infrastructure/firebase/firebase.service';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -51,3 +51,4 @@ export class AuthService {
     }
   }
 }
+
