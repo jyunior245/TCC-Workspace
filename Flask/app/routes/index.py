@@ -1,17 +1,14 @@
-from flask import Blueprint, flash, request, session
+from flask import Blueprint, flash, request, session, redirect, url_for
 from flask import render_template
 import bcrypt
 import requests
-from app.database import get_db_connection
+from app.extensions import db
+from app.models.user import User
 
 index_bp = Blueprint('index', __name__)
 login_bp = Blueprint('login', __name__)
 register_bp = Blueprint('register', __name__)
 
-@index_bp.route('/')
-def index():
-    print("Index route accessed")
-    return "Hello, World!"
 
 @login_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -19,18 +16,19 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        user = User.query.filter_by(email=email).first()
 
-        cur.execute("SELECT id, password FROM users WHERE email=%s", (email,))
-        user = cur.fetchone()
+        if user and bcrypt.checkpw(password.encode(), user.password.encode()):
+            session['user_id'] = user.id
+            session['user_type'] = user.user_type
+            
+            if user.user_type == 'patient':
+                return redirect(url_for('patient.dashboard'))
+            elif user.user_type == 'health_agent':
+                return redirect(url_for('agent.dashboard'))
+            else:
+                return render_template("index.html") # Default fallback
 
-        cur.close()
-        conn.close()
-
-        if user and bcrypt.checkpw(password.encode(), user[1].encode()):
-            session['user_id'] = user[0]
-            return render_template("index.html")
         flash("Invalid Credentials")
 
     return render_template('login.html')
@@ -42,20 +40,26 @@ def register():
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
+        user_type = request.form["user_type"]
 
         hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        cur.execute(
-            "INSERT INTO users (name, username, email, password) VALUES (%s, %s, %s, %s)",
-            (name, username, email, hashed_password)
+        
+        new_user = User(
+            name=name, 
+            username=username, 
+            email=email, 
+            password=hashed_password,
+            user_type=user_type
         )
+        db.session.add(new_user)
+        db.session.commit()
 
-        conn.commit()
-        cur.close() 
-        conn.close()
-
-        return render_template('login.html')
+        return redirect(url_for('login.login'))
 
     return render_template('register.html')
+
+@index_bp.route('/')
+def index():
+    print("Index route accessed")
+    return "Hello, World!"
+

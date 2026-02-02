@@ -21,6 +21,13 @@
         <input type="text" name="username" placeholder="Nome de Usuário" required>
         <input type="email" name="email" placeholder="E-mail" required>
         <input type="password" name="password" placeholder="Senha" required>
+        
+        <select name="user_type" required style="width: 100%; padding: 8px; margin: 8px 0;">
+            <option value="" disabled selected>Selecione o tipo de usuário</option>
+            <option value="patient">Paciente</option>
+            <option value="health_agent">Agente de Saúde</option>
+        </select>
+
         <button type="submit">Cadastrar</button>
     </form>
 
