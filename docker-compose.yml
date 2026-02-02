@@ -16,7 +16,7 @@ services:
 
   db:
     image: postgres:13
-    container_name: database
+    container_name: flask_postgres
     env_file:
       - .env
     environment:
@@ -27,7 +27,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h ${DB_HOST} -p 5432 -d ${DATABASE_NAME} "]
       interval: 10s
       retries: 5
     volumes:
