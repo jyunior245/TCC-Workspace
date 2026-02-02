@@ -9,7 +9,8 @@ services:
     env_file:
       - .env
     environment:
-      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${DATABASE_NAME}
+      - RUNNING_IN_DOCKER=true
+      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${DATABASE_NAME}
     depends_on:
       - db
       # - minio  
