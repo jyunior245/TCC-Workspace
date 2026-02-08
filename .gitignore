@@ -2,6 +2,8 @@ venv/
 .env
 node_modules/
 
+tcc-ia-health-firebase-adminsdk-fbsvc-d6db125a3f.json
+
 *.pyc
 __pycache__/
 backend/credentials/firebase-admin.json

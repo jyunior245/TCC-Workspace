@@ -1,31 +1,30 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <style>
-        body { font-family: Arial; background: #f4f4f4; }
-        .container { width: 300px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; }
-        input { width: 100%; padding: 8px; margin: 8px 0; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; }
-        a { text-decoration: none; font-size: 14px; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-<div class="container">
-    <h2>Login</h2>
+{% block title %}Login{% endblock %}
+
+{% block content %}
+    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Bem-vindo</h2>
+    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Faça login para continuar</p>
 
     <form action="/login" method="POST">
-        <input type="email" name="email" placeholder="E-mail" required>
-        <input type="password" name="password" placeholder="Senha" required>
-        <button type="submit">Entrar</button>
+        <!-- Email -->
+        <div class="md-text-field">
+            <input type="email" name="email" id="email" placeholder=" " required>
+            <label for="email">E-mail</label>
+        </div>
+
+        <!-- Senha -->
+        <div class="md-text-field">
+            <input type="password" name="password" id="password" placeholder=" " required>
+            <label for="password">Senha</label>
+        </div>
+
+        <button type="submit" class="md-button filled">
+            Entrar
+        </button>
     </form>
 
-    <p style="text-align:center; margin-top:10px;">
-        <a href="/register">Criar conta</a>
-    </p>
-</div>
-
-</body>
-</html>
+    <div style="text-align: center; margin-top: 24px;">
+        <a href="/register" class="md-button text">Criar nova conta</a>
+    </div>
+{% endblock %}

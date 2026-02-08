@@ -1,40 +1,76 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastrar Usuário</title>
-    <style>
-        body { font-family: Arial; background: #f4f4f4; }
-        .container { width: 300px; margin: 80px auto; padding: 20px; background: white; border-radius: 8px; }
-        input { width: 100%; padding: 8px; margin: 8px 0; }
-        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; }
-        a { text-decoration: none; font-size: 14px; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-<div class="container">
-    <h2>Criar Conta</h2>
+{% block title %}Criar Conta{% endblock %}
+
+{% block content %}
+    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Criar Conta</h2>
+    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Preencha os dados para começar</p>
 
     <form action="/register" method="POST">
-        <input type="text" name="name" placeholder="Nome completo" required>
-        <input type="text" name="username" placeholder="Nome de Usuário" required>
-        <input type="email" name="email" placeholder="E-mail" required>
-        <input type="password" name="password" placeholder="Senha" required>
         
-        <select name="user_type" required style="width: 100%; padding: 8px; margin: 8px 0;">
-            <option value="" disabled selected>Selecione o tipo de usuário</option>
-            <option value="patient">Paciente</option>
-            <option value="health_agent">Agente de Saúde</option>
-        </select>
+        <!-- Nome Completo -->
+        <div class="md-text-field">
+            <input type="text" name="name" id="name" placeholder=" " required>
+            <label for="name">Nome Completo</label>
+        </div>
 
-        <button type="submit">Cadastrar</button>
+        <!-- Nome de Usuário -->
+        <div class="md-text-field">
+            <input type="text" name="username" id="username" placeholder=" " required>
+            <label for="username">Nome de Usuário</label>
+        </div>
+
+        <!-- Email -->
+        <div class="md-text-field">
+            <input type="email" name="email" id="email" placeholder=" " required>
+            <label for="email">E-mail</label>
+        </div>
+
+        <!-- Senha -->
+        <div class="md-text-field" style="margin-bottom: 8px;">
+            <input type="password" name="password" id="password" placeholder=" " required>
+            <label for="password">Senha</label>
+        </div>
+
+        <!-- Password Strength Meter -->
+        <div class="password-requirements">
+            <div class="req-chip" id="req-length"><i class="material-icons-outlined">close</i> 6+ Caracteres</div>
+            <div class="req-chip" id="req-lower"><i class="material-icons-outlined">close</i> Minúscula</div>
+            <div class="req-chip" id="req-upper"><i class="material-icons-outlined">close</i> Maiúscula</div>
+            <div class="req-chip" id="req-number"><i class="material-icons-outlined">close</i> Número</div>
+            <div class="req-chip" id="req-special"><i class="material-icons-outlined">close</i> Símbolo</div>
+        </div>
+
+        <div class="password-strength-container">
+            <div class="strength-bars">
+                <div class="strength-bar" id="bar-1"></div>
+                <div class="strength-bar" id="bar-2"></div>
+                <div class="strength-bar" id="bar-3"></div>
+                <div class="strength-bar" id="bar-4"></div>
+            </div>
+            <div class="strength-text" id="strength-text"></div>
+        </div>
+
+        <!-- Tipo de Usuário -->
+        <div class="md-text-field">
+            <select name="user_type" id="user_type" required>
+                <option value="" disabled selected></option>
+                <option value="patient">Paciente</option>
+                <option value="health_agent">Agente Comunitário de Saúde (ACS)</option>
+            </select>
+            <label for="user_type">Tipo de Usuário</label>
+        </div>
+
+        <button type="submit" class="md-button filled">
+            Cadastrar
+        </button>
     </form>
 
-    <p style="text-align:center; margin-top:10px;">
-        <a href="/login">Já tenho uma conta</a>
-    </p>
-</div>
+    <div style="text-align: center; margin-top: 24px;">
+        <a href="/login" class="md-button text">Já tenho uma conta</a>
+    </div>
+{% endblock %}
 
-</body>
-</html>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password_meter.js') }}"></script>
+{% endblock %}

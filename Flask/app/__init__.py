@@ -12,7 +12,7 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.secret_key="supersecretkey"
 
-    # Database Configuration
+    # Configuração do banco de dados
     db_host = os.getenv("DB_HOST", "localhost")
     db_user = os.getenv("POSTGRES_USER", "postgres")
     db_password = os.getenv("POSTGRES_PASSWORD", "password")

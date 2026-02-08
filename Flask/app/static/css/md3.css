@@ -1,0 +1,257 @@
+:root {
+  /* Color Palette - MD3 Baseline (Purple) */
+  --md-sys-color-primary: #6750A4;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #EADDFF;
+  --md-sys-color-on-primary-container: #21005D;
+  
+  --md-sys-color-secondary: #625B71;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #E8DEF8;
+  --md-sys-color-on-secondary-container: #1D192B;
+  
+  --md-sys-color-tertiary: #7D5260;
+  --md-sys-color-on-tertiary: #FFFFFF;
+  --md-sys-color-tertiary-container: #FFD8E4;
+  --md-sys-color-on-tertiary-container: #31111D;
+  
+  --md-sys-color-error: #B3261E;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #F9DEDC;
+  --md-sys-color-on-error-container: #410E0B;
+  
+  --md-sys-color-background: #FFFBFE;
+  --md-sys-color-on-background: #1C1B1F;
+  --md-sys-color-surface: #FFFBFE;
+  --md-sys-color-on-surface: #1C1B1F;
+  --md-sys-color-surface-variant: #E7E0EC;
+  --md-sys-color-on-surface-variant: #49454F;
+  --md-sys-color-outline: #79747E;
+  --md-sys-color-outline-variant: #CAC4D0;
+
+  /* Typography - Roboto */
+  --md-sys-typescale-display-large-font: 'Roboto', sans-serif;
+  --md-sys-typescale-display-large-size: 57px;
+  --md-sys-typescale-display-large-weight: 400;
+  
+  --md-sys-typescale-headline-large-font: 'Roboto', sans-serif;
+  --md-sys-typescale-headline-large-size: 32px;
+  --md-sys-typescale-headline-large-weight: 400;
+  
+  --md-sys-typescale-title-medium-font: 'Roboto', sans-serif;
+  --md-sys-typescale-title-medium-size: 16px;
+  --md-sys-typescale-title-medium-weight: 500;
+  
+  --md-sys-typescale-body-large-font: 'Roboto', sans-serif;
+  --md-sys-typescale-body-large-size: 16px;
+  --md-sys-typescale-body-large-weight: 400;
+
+  --md-sys-typescale-label-large-font: 'Roboto', sans-serif;
+  --md-sys-typescale-label-large-size: 14px;
+  --md-sys-typescale-label-large-weight: 500;
+
+  /* Elevation */
+  --md-sys-elevation-1: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-2: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  
+  /* Shapes */
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: 'Roboto', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Typography Classes */
+.display-large { font-size: var(--md-sys-typescale-display-large-size); font-weight: var(--md-sys-typescale-display-large-weight); }
+.headline-large { font-size: var(--md-sys-typescale-headline-large-size); font-weight: var(--md-sys-typescale-headline-large-weight); }
+.title-medium { font-size: var(--md-sys-typescale-title-medium-size); font-weight: var(--md-sys-typescale-title-medium-weight); }
+.body-large { font-size: var(--md-sys-typescale-body-large-size); font-weight: var(--md-sys-typescale-body-large-weight); }
+.label-large { font-size: var(--md-sys-typescale-label-large-size); font-weight: var(--md-sys-typescale-label-large-weight); }
+
+/* Components */
+
+/* Card */
+.md-card {
+  background-color: var(--md-sys-color-surface);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: 24px;
+  box-shadow: var(--md-sys-elevation-1);
+  max-width: 400px;
+  width: 100%;
+  margin: 16px;
+  box-sizing: border-box;
+}
+
+/* Outlined Text Field */
+.md-text-field {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.md-text-field input, .md-text-field select, .md-text-field textarea {
+  width: 100%;
+  padding: 16px 16px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: inherit;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.md-text-field input:focus, .md-text-field select:focus, .md-text-field textarea:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+  border-width: 2px;
+  padding: 15px 15px; /* Adjust for border width increase */
+}
+
+.md-text-field label {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  background-color: var(--md-sys-color-surface);
+  padding: 0 4px;
+  transition: 0.2s ease all;
+  pointer-events: none;
+}
+
+.md-text-field input:focus ~ label,
+.md-text-field input:not(:placeholder-shown) ~ label,
+.md-text-field select:focus ~ label,
+.md-text-field select:valid ~ label,
+.md-text-field textarea:focus ~ label,
+.md-text-field textarea:not(:placeholder-shown) ~ label {
+  top: -8px;
+  font-size: 12px;
+  color: var(--md-sys-color-primary);
+}
+
+/* Helper Text */
+.md-helper-text {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 4px;
+  margin-left: 16px;
+}
+
+/* Buttons */
+.md-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  height: 40px;
+  border-radius: 20px; /* Stadium shape */
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.md-button.filled {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.md-button.filled:hover {
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.3);
+  opacity: 0.92;
+}
+
+.md-button.text {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+}
+
+.md-button.text:hover {
+  background-color: rgba(103, 80, 164, 0.08); /* Primary with opacity */
+}
+
+/* Flash Messages */
+.md-banner {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  padding: 12px 16px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* Password Strength Meter */
+.password-strength-container {
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.strength-bars {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.strength-bar {
+  height: 4px;
+  flex: 1;
+  background-color: var(--md-sys-color-surface-variant);
+  border-radius: 2px;
+  transition: background-color 0.3s;
+}
+
+.strength-text {
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: right;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Password Requirements Chips */
+.password-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.req-chip {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.req-chip.valid {
+  background-color: #E8DEF8; /* Secondary Container */
+  color: #1D192B;
+}
+
+.req-chip i {
+  font-size: 12px;
+}

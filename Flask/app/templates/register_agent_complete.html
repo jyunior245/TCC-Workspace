@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro Complementar - ACS{% endblock %}
+
+{% block content %}
+    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Dados Profissionais</h2>
+    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Informações adicionais para ACS</p>
+
+    <form action="/register/complete" method="POST">
+        <!-- Formação Profissional -->
+        <div class="md-text-field">
+            <input type="text" name="professional_training" id="professional_training" placeholder=" " required>
+            <label for="professional_training">Formação Profissional</label>
+        </div>
+
+        <!-- Vínculo Institucional -->
+        <div class="md-text-field">
+            <input type="text" name="institutional_link" id="institutional_link" placeholder=" " required>
+            <label for="institutional_link">Vínculo Institucional</label>
+        </div>
+
+        <!-- Área de Atuação -->
+        <div class="md-text-field">
+            <input type="text" name="area_of_activity" id="area_of_activity" placeholder=" " required>
+            <label for="area_of_activity">Área de Atuação</label>
+        </div>
+
+        <!-- Tempo de Serviço -->
+        <div class="md-text-field">
+            <input type="text" name="service_time" id="service_time" placeholder=" " required>
+            <label for="service_time">Tempo de Serviço</label>
+        </div>
+
+        <!-- Unidade de Saúde -->
+        <div class="md-text-field">
+            <input type="text" name="health_unit" id="health_unit" placeholder=" " required>
+            <label for="health_unit">Unidade de Saúde</label>
+        </div>
+
+        <!-- Território Atendido -->
+        <div class="md-text-field">
+            <input type="text" name="territory_served" id="territory_served" placeholder=" " required>
+            <label for="territory_served">Território Atendido</label>
+        </div>
+
+        <button type="submit" class="md-button filled">
+            Finalizar Cadastro
+        </button>
+    </form>
+{% endblock %}

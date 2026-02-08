@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro Complementar - Paciente{% endblock %}
+
+{% block content %}
+    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Dados Complementares</h2>
+    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Informações adicionais para pacientes</p>
+
+    <form action="/register/complete" method="POST">
+        <!-- Escolaridade -->
+        <div class="md-text-field">
+            <select name="education_level" id="education_level" required>
+                <option value="" disabled selected></option>
+                <option value="fundamental_incompleto">Fundamental Incompleto</option>
+                <option value="fundamental_completo">Fundamental Completo</option>
+                <option value="medio_completo">Médio Completo</option>
+                <option value="superior_completo">Superior Completo</option>
+            </select>
+            <label for="education_level">Escolaridade</label>
+        </div>
+
+        <!-- Renda Mensal -->
+        <div class="md-text-field">
+            <input type="text" name="income" id="income" placeholder=" " required>
+            <label for="income">Renda Mensal (R$)</label>
+        </div>
+
+        <!-- Condições de Moradia -->
+        <div class="md-text-field">
+            <input type="text" name="housing_conditions" id="housing_conditions" placeholder=" " required>
+            <label for="housing_conditions">Condições de Moradia</label>
+            <div class="md-helper-text">Ex: Alvenaria, 4 cômodos</div>
+        </div>
+
+        <!-- Acesso a Saneamento -->
+        <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+            <input type="checkbox" name="sanitation_access" id="sanitation_access" style="width: 20px; height: 20px; accent-color: var(--md-sys-color-primary);">
+            <label for="sanitation_access" class="body-large" style="color: var(--md-sys-color-on-surface);">Acesso a Saneamento Básico</label>
+        </div>
+
+        <!-- Situação de Trabalho -->
+        <div class="md-text-field">
+            <input type="text" name="work_status" id="work_status" placeholder=" " required>
+            <label for="work_status">Situação de Trabalho</label>
+        </div>
+
+        <!-- Contexto Familiar -->
+        <div class="md-text-field">
+            <textarea name="family_context" id="family_context" rows="4" placeholder=" "></textarea>
+            <label for="family_context">Contexto Familiar</label>
+        </div>
+
+        <button type="submit" class="md-button filled">
+            Finalizar Cadastro
+        </button>
+    </form>
+{% endblock %}
