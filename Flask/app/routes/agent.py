@@ -6,4 +6,9 @@ agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 def dashboard():
     if 'user_id' not in session or session.get('user_type') != 'health_agent':
         return redirect(url_for('login.login'))
+        
+    # Checa se o registro está completo
+    if not session.get('is_active', False):
+         return redirect(url_for('register.complete_registration'))
+
     return render_template('agent_dashboard.html')
