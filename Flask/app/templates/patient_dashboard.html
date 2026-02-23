@@ -1,19 +1,127 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Painel do Paciente</title>
-    <style>
-        body { font-family: Arial; background: #e3f2fd; }
-        .container { width: 80%; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; }
-        h1 { color: #1565c0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Bem-vindo, Paciente!</h1>
-        <p>Esta é a sua área exclusiva.</p>
-        <a href="/login">Sair</a>
+{% extends "base.html" %}
+
+{% block title %}Paciente{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/patient.css') }}">
+{% endblock %}
+
+{% block content %}
+<header class="app-bar" role="banner" aria-label="Barra de aplicativo">
+  <div class="app-bar__title">Paciente</div>
+  <button class="icon-button" aria-label="Sair" onclick="window.location.href='/logout'">
+    <span class="material-icons-outlined">logout</span>
+  </button>
+</header>
+
+<main class="tabs-container" role="main">
+  <section class="tabs-content">
+    <div class="tab-panel active" id="tab-ai" role="tabpanel" aria-labelledby="nav-ai">
+      <div class="ai-center">
+        <button class="fab-mic" id="fabMic" aria-label="Falar com assistente">
+          <span class="material-icons-outlined">mic</span>
+        </button>
+        <div class="hint body-large">Toque para iniciar a conversa</div>
+      </div>
+
+      <div class="modal-overlay" id="voiceModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Interação por voz">
+        <div class="modal-card">
+          <button class="icon-button modal-close" id="closeModal" aria-label="Fechar">
+            <span class="material-icons-outlined">close</span>
+          </button>
+          <div class="modal-header title-large">Assistente</div>
+          <div class="waveform" aria-label="Capturando voz">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          </div>
+          <div class="transcription md-text-field">
+            <textarea id="transcriptionArea" rows="6" placeholder="Transcrição em tempo real"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
-</body>
-</html>
+
+    <div class="tab-panel" id="tab-schedule" role="tabpanel" aria-labelledby="nav-schedule" aria-hidden="true">
+      <div class="schedule-header">
+        <div class="headline-small">Agenda</div>
+        <div class="tabs-inline" role="tablist" aria-label="Filtro de período">
+          <button class="chip filter-chip active" data-view="month" aria-selected="true">Mês</button>
+          <button class="chip filter-chip" data-view="week" aria-selected="false">Semana</button>
+        </div>
+      </div>
+
+      <div class="calendar" id="calendar" aria-label="Calendário">
+        <div class="calendar-grid header">
+          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+        </div>
+        <div class="calendar-grid body" id="calendarGrid"></div>
+      </div>
+
+      <div class="events-section">
+        <div class="section-title title-medium">Próximos eventos</div>
+
+        <div class="list-state" id="eventsLoading">
+          <div class="card shimmer"></div>
+          <div class="card shimmer"></div>
+          <div class="card shimmer"></div>
+        </div>
+
+        <div class="list-state hidden" id="eventsEmpty">
+          <div class="empty body-large">Nenhum evento para o período selecionado</div>
+        </div>
+
+        <div class="cards" id="eventsList" aria-live="polite"></div>
+      </div>
+
+      <button class="fab-add" id="fabAddEvent" aria-label="Adicionar agendamento">
+        <span class="material-icons-outlined">add</span>
+      </button>
+    </div>
+
+    <div class="tab-panel" id="tab-reports" role="tabpanel" aria-labelledby="nav-reports" aria-hidden="true">
+      <div class="reports-appbar">
+        <div class="headline-small">Relatórios</div>
+        <div class="menu">
+          <button class="icon-button" id="menuExport" aria-haspopup="menu" aria-label="Mais opções">
+            <span class="material-icons-outlined">more_vert</span>
+          </button>
+          <div class="menu-surface" id="exportMenu" role="menu" aria-hidden="true">
+            <button role="menuitem" class="menu-item" data-action="export-pdf">Exportar PDF</button>
+            <button role="menuitem" class="menu-item" data-action="export-csv">Exportar CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="list-state" id="reportsLoading">
+        <div class="card shimmer"></div>
+        <div class="card shimmer"></div>
+      </div>
+
+      <div class="list-state hidden" id="reportsEmpty">
+        <div class="empty body-large">Nenhum relatório disponível</div>
+      </div>
+
+      <div class="reports-list" id="reportsList"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom-nav" role="tablist" aria-label="Navegação">
+  <button class="nav-item active" id="nav-ai" data-target="tab-ai" aria-selected="true">
+    <span class="material-icons-outlined">record_voice_over</span>
+    <span class="label">Assistente</span>
+  </button>
+  <button class="nav-item" id="nav-schedule" data-target="tab-schedule" aria-selected="false">
+    <span class="material-icons-outlined">event</span>
+    <span class="label">Agenda</span>
+  </button>
+  <button class="nav-item" id="nav-reports" data-target="tab-reports" aria-selected="false">
+    <span class="material-icons-outlined">insert_chart</span>
+    <span class="label">Relatórios</span>
+  </button>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/patient_dashboard.js') }}"></script>
+{% endblock %}
