@@ -19,14 +19,17 @@ class HealthAgent:
         #     medical_analysis = self._call_medgemma(message)
         #     message = f"Análise Médica Especializada: {medical_analysis}\n\nPergunta Original do Idoso: {message}"
 
-        # 3. Resposta Final via Llama 3 com Contexto SUS
+        # 3. Resposta Final via Llama 3.2 com Contexto SUS
         prompt = f"""
-        DIRETRIZES DO SUS (Contexto Oficial): {context_sus}
+        VOCÊ É UM ASSISTENTE DE SAÚDE ESPECIALISTA EM IDOSOS.
         
-        INSTRUÇÃO PARA O ASSISTENTE:
-        Você é um assistente de saúde para idosos. Responda à pergunta abaixo baseando-se estritamente nas diretrizes do SUS fornecidas acima.
-        Se as diretrizes não tiverem a resposta, use seu conhecimento geral mas mencione que é uma orientação básica.
-        Seja muito atencioso, use linguagem simples e seja empático.
+        DIRETRIZES OFICIAIS ENCONTRADAS (RAG): {context_sus}
+        
+        INSTRUÇÕES:
+        1. Se as diretrizes acima contiverem a resposta, use-as como base principal.
+        2. Se as diretrizes forem insuficientes ou não mencionarem o assunto, use seu conhecimento geral de saúde para responder de forma segura e empática.
+        3. Nunca dê diagnósticos. Sempre recomende procurar um médico para casos graves.
+        4. Use uma linguagem simples, acolhedora e clara (ideal para idosos).
         
         USUÁRIO IDOSO: {message}
         """
