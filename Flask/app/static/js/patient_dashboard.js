@@ -19,14 +19,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMic = document.getElementById('fabMic');
   const voiceModal = document.getElementById('voiceModal');
   const closeModal = document.getElementById('closeModal');
-  if (fabMic && voiceModal && closeModal) {
+  const transcriptionArea = document.getElementById('transcriptionArea');
+
+  if (fabMic && voiceModal && closeModal && transcriptionArea) {
     fabMic.addEventListener('click', () => {
       voiceModal.classList.add('active');
       voiceModal.setAttribute('aria-hidden', 'false');
+      transcriptionArea.focus();
     });
+
     closeModal.addEventListener('click', () => {
       voiceModal.classList.remove('active');
       voiceModal.setAttribute('aria-hidden', 'true');
+      transcriptionArea.value = ''; // Limpa ao fechar
+    });
+
+    // Enviar pergunta ao pressionar Enter
+    transcriptionArea.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const message = transcriptionArea.value.trim();
+        if (!message) return;
+
+        // Feedback visual de carregamento
+        transcriptionArea.value = "Processando sua dúvida...";
+        transcriptionArea.disabled = true;
+
+        try {
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+          });
+
+          const data = await response.json();
+          
+          if (data.response) {
+            transcriptionArea.value = data.response;
+          } else {
+            transcriptionArea.value = "Desculpe, tive um problema para responder. Tente novamente.";
+          }
+        } catch (error) {
+          transcriptionArea.value = "Erro de conexão. Verifique se o servidor está rodando.";
+        } finally {
+          transcriptionArea.disabled = false;
+        }
+      }
     });
   }
 

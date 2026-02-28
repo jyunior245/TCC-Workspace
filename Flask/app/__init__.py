@@ -5,6 +5,7 @@ from app.routes.index import login_bp
 from app.routes.index import register_bp
 from app.routes.patient import patient_bp
 from app.routes.agent import agent_bp
+from app.routes.chat import chat_bp
 from app.extensions import db
 from app.models import init_db
 
@@ -18,7 +19,11 @@ def create_app():
     db_password = os.getenv("POSTGRES_PASSWORD", "password")
     db_name = os.getenv("DATABASE_NAME", "postgres")
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:5432/{db_name}"
+    # Escapa caracteres especiais na senha (como o @)
+    from urllib.parse import quote_plus
+    safe_password = quote_plus(db_password)
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{safe_password}@{db_host}:5432/{db_name}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
@@ -31,6 +36,7 @@ def create_app():
     app.register_blueprint(register_bp)
     app.register_blueprint(patient_bp)
     app.register_blueprint(agent_bp)
+    app.register_blueprint(chat_bp)
 
     return app
 
