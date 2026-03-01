@@ -41,12 +41,41 @@ class RAGService:
 
     def add_protocol(self, text, metadata=None):
         if not self.offline_mode and self.model:
-            # Divide o texto em pedaços menores (chunks) para melhor precisão
-            chunks = [text[i:i+1000] for i in range(0, len(text), 800)]
+            # Refinamento de Chunking: 
+            # 1. Limpeza básica do texto
+            text = text.replace('\n', ' ').replace('  ', ' ')
+            
+            # 2. Divide em chunks com sobreposição (overlap) para manter o contexto entre pedaços
+            chunk_size = 1000
+            overlap = 200
+            
+            chunks = []
+            start = 0
+            while start < len(text):
+                end = start + chunk_size
+                # Tenta não cortar frases ao meio (busca o último ponto final no chunk)
+                if end < len(text):
+                    last_period = text.rfind('. ', start, end)
+                    if last_period != -1 and last_period > start + (chunk_size // 2):
+                        end = last_period + 1
+                
+                chunks.append(text[start:end].strip())
+                start = end - overlap if end < len(text) else len(text)
+
             for idx, chunk in enumerate(chunks):
+                if len(chunk) < 50: continue # Ignora pedaços irrelevantes
+                
                 embedding = self.model.encode(chunk).tolist()
-                doc_id = f"{metadata.get('source', 'doc')}_{metadata.get('page', 0)}_{idx}"
-                self.collection.add(ids=[doc_id], embeddings=[embedding], documents=[chunk], metadatas=[metadata])
+                # ID único combinando fonte e índice do chunk
+                source_name = metadata.get('source', 'doc').replace(' ', '_')
+                doc_id = f"{source_name}_p{metadata.get('page', 0)}_c{idx}"
+                
+                self.collection.add(
+                    ids=[doc_id], 
+                    embeddings=[embedding], 
+                    documents=[chunk], 
+                    metadatas=[metadata]
+                )
 
     def query_protocols(self, query_text, n_results=2):
         if not self.offline_mode and self.model:
