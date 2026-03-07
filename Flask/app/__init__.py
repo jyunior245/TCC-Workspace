@@ -8,16 +8,19 @@ from app.routes.agent import agent_bp
 from app.routes.chat import chat_bp
 from app.extensions import db
 from app.models import init_db
+from dotenv import load_dotenv
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.secret_key="supersecretkey"
 
+    load_dotenv('.env')
+
     # Configuração do banco de dados
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_user = os.getenv("POSTGRES_USER", "postgres")
-    db_password = os.getenv("POSTGRES_PASSWORD", "password")
-    db_name = os.getenv("DATABASE_NAME", "postgres")
+    db_host = os.getenv("DB_HOST")
+    db_user = os.getenv("POSTGRES_USER")
+    db_password = os.getenv("POSTGRES_PASSWORD")
+    db_name = os.getenv("DATABASE_NAME")
     
     # Escapa caracteres especiais na senha (como o @)
     from urllib.parse import quote_plus

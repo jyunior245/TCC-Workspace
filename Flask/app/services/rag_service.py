@@ -88,5 +88,31 @@ class RAGService:
         # Busca simples por texto se o modelo falhar
         return "Consulte o manual do SUS para orientações sobre: " + query_text
 
+    def query_protocols_with_sources(self, query_text, n_results=2):
+        if not self.offline_mode and self.model:
+            try:
+                query_embedding = self.model.encode(query_text).tolist()
+                results = self.collection.query(query_embeddings=[query_embedding], n_results=n_results)
+                docs = results.get('documents') or []
+                metas = results.get('metadatas') or []
+                if docs:
+                    context = " ".join(docs[0])
+                    sources = []
+                    for md in metas[0]:
+                        if isinstance(md, dict):
+                            src = md.get('source')
+                            pg = md.get('page')
+                        else:
+                            src = None
+                            pg = None
+                        if src:
+                            label = f"{src} (p.{pg})" if pg else f"{src}"
+                            if label not in sources:
+                                sources.append(label)
+                    return context, sources
+            except:
+                pass
+        return "Consulte o manual do SUS para orientações sobre: " + query_text, []
+
 # Instância global
 rag_service = RAGService()

@@ -24,11 +24,18 @@ class HealthAgent:
 
         # 3. BUSCA RAG (Apenas se a intenção for de saúde)
         context_sus = ""
+        sources = []
         if intent in ["HEALTH_QUERY", "EMERGENCY"]:
-            context_sus = rag_service.query_protocols(message)
+            try:
+                context_sus, sources = rag_service.query_protocols_with_sources(message)
+            except AttributeError:
+                context_sus = rag_service.query_protocols(message)
+                sources = []
+        rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
+        print(f"[AI][RAG] intent={intent} hit={rag_hit} fontes={sources}")
 
         # 4. CONSTRUÇÃO DO PROMPT FINAL
-        prompt = self._build_prompt(message, intent, context_sus, persistent_history)
+        prompt = self._build_prompt(message, intent, context_sus, persistent_history, sources)
         
         # 5. GERA RESPOSTA
         response = self._call_llama(prompt)
@@ -59,33 +66,52 @@ class HealthAgent:
             if category in intent: return category
         return "OTHER"
 
-    def _build_prompt(self, message, intent, context, history):
+    def _build_prompt(self, message, intent, context, history, sources=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
-        
+
         if intent == "EMERGENCY":
-            system_rules += " ATENÇÃO: O usuário pode estar em emergência. Recomende socorro imediato!"
+            system_rules += " ATENÇÃO: Possível emergência. Oriente buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."
         elif intent == "GREETING":
-            system_rules += " Seja gentil e pergunte como o usuário se sente hoje."
+            system_rules += " Responda cordialmente a saudações e incentive o autocuidado."
+
+        if intent in ("HEALTH_QUERY", "EMERGENCY"):
+            rag_guidance = (
+                "Regras de Resposta (priorizar RAG):\n"
+                "- Responda exclusivamente com base no CONTEXTO-BASE (Protocolos do SUS).\n"
+                "- Se o CONTEXTO-BASE não trouxer a resposta, diga que não encontrou nos protocolos e recomende procurar a UBS.\n"
+                "- Não invente informações, não dê diagnósticos; forneça orientações gerais e seguras.\n"
+            )
+        else:
+            rag_guidance = (
+                "Regras de Resposta (assunto geral):\n"
+                "- Para assuntos não médicos, seja útil e direto; use o histórico apenas para personalizar.\n"
+            )
+
+        fontes_instruction = ""
+        if sources:
+            fontes_str = ", ".join(sources)
+            fontes_instruction = f'Ao final da resposta, inclua a linha: "Fontes: {fontes_str}"'
 
         return f"""
         {system_rules}
-        
-        MEMÓRIA ANTERIOR:
+
+        CONTEXTO-BASE (Protocolos do SUS):
+        {context or '[indisponível]'}
+
+        HISTÓRICO (apenas para personalização; não substitui protocolos):
         {history}
-        
-        CONTEXTO SUS (Protocolos):
-        {context}
-        
+
+        {rag_guidance}
+
+        FORMATO DA RESPOSTA:
+        - Responda diretamente em português brasileiro, em 2–5 frases claras.
+        - Não inclua rótulos como 'U:', 'A:', 'USUÁRIO:' ou 'ASSISTENTE:'.
+        - Não repita o conteúdo deste prompt.
+        - Não inclua linhas de fontes na resposta.
+
         USUÁRIO: {message}
         ASSISTENTE:"""
 
-    def _call_llama(self, prompt):
-        payload = {"model": self.llama_model, "prompt": prompt, "stream": False}
-        try:
-            res = requests.post(self.ollama_url, json=payload, timeout=90)
-            return res.json().get("response", "...")
-        except Exception as e:
-            return f"Erro de conexão: {str(e)}"
 
     def _needs_medical_analysis(self, text):
         # Lógica para decidir se chama o MedGemma (pode ser refinada)

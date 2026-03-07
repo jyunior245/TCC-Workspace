@@ -1,9 +1,13 @@
 import sys
 import os
 from flask import Flask
+from dotenv import load_dotenv
 
 # Adiciona o diretório atual ao path para importar os serviços
 sys.path.append(os.getcwd())
+
+_basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(os.path.dirname(_basedir), '.env'))
 
 from app.services.ai_service import HealthAgent
 from app.services.rag_service import rag_service
@@ -14,12 +18,17 @@ from app.models.user import User
 def create_test_app():
     app = Flask(__name__)
     # Usa a mesma config do seu projeto real
+
+    if os.getenv('RUNNING_IN_DOCKER'):
+        os.environ['DB_HOST'] = 'db'
+    elif os.getenv('DB_HOST') == 'db':
+        os.environ['DB_HOST'] = 'localhost'
+
     db_host = os.getenv("DB_HOST", "localhost")
     db_user = os.getenv("POSTGRES_USER", "postgres")
     db_password = os.getenv("POSTGRES_PASSWORD", "password")
     db_name = os.getenv("DATABASE_NAME", "postgres")
     
-    # Escapa caracteres especiais na senha (como o @)
     from urllib.parse import quote_plus
     safe_password = quote_plus(db_password)
     
