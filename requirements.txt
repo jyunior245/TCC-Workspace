@@ -9,6 +9,16 @@ flask-sqlalchemy
 python-dotenv
 pyrebase4
 google-generativeai
-chromadb
+chromadb=0.5
+pydantic>=2, <3
+pypdf
 sentence-transformers
 requests
+whisperlivekit
+websocket-client
+sounddevice
+soundfile
+pyttsx3
+pygame
+edge_tts
+SpeechRecognition
