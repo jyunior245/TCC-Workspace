@@ -89,13 +89,14 @@
   border-radius: 50%;
   border: none;
   color: var(--md-sys-color-on-primary);
-  background: var(--md-sys-color-primary);
-  box-shadow: var(--md-sys-elevation-3, 0 2px 6px rgba(0,0,0,.3));
+  background: radial-gradient(circle at 35% 30%, #7c4dff 0%, #5e35b1 40%, #311b92 100%);
+  box-shadow: 0 8px 24px rgba(98,0,238,.45), 0 0 0 2px rgba(255,255,255,.08) inset;
   cursor: pointer;
   display: grid;
   place-items: center;
   font-size: 48px;
 }
+.fab-mic.listening { box-shadow: 0 12px 36px rgba(98,0,238,.6), 0 0 0 4px rgba(124,77,255,.18) inset; }
 .fab-mic::before,
 .fab-mic::after {
   content: "";
@@ -116,6 +117,9 @@
 .hint {
   color: var(--md-sys-color-on-surface-variant);
 }
+.status { text-align: center; color: var(--md-sys-color-on-surface-variant); }
+.waveform.listening .bar { animation-duration: .9s; }
+.waveform.speaking .bar { animation-duration: 1.4s; opacity: .85; }
 
 .modal-overlay {
   position: fixed;

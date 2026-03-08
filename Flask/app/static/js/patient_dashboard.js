@@ -22,16 +22,144 @@ document.addEventListener('DOMContentLoaded', () => {
   const transcriptionArea = document.getElementById('transcriptionArea');
 
   if (fabMic && voiceModal && closeModal && transcriptionArea) {
-    fabMic.addEventListener('click', () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let rec = null;
+    const isSecureOrigin = location.protocol === 'https:' || location.hostname === 'localhost';
+
+    if (SR && isSecureOrigin) {
+      try {
+        rec = new SR();
+        rec.lang = 'pt-BR';
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        rec.onstart = () => {
+          fabMic.classList.add('listening');
+          transcriptionArea.value = 'Ouvindo...';
+        };
+        rec.onresult = (e) => {
+          const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
+          transcriptionArea.value = text;
+          try { rec.stop(); } catch (_) {}
+          callAgent(text);
+        };
+        rec.onerror = (e) => {
+          console.warn('STT error', e);
+          let msg = 'Erro no reconhecimento de voz. Você pode digitar sua pergunta.';
+          switch(e.error){
+            case 'not-allowed':
+            case 'service-not-allowed':
+              msg = 'Permissão de microfone negada. Habilite o microfone nas permissões do navegador para este site.';
+              break;
+            case 'no-speech':
+              msg = 'Não ouviu fala. Vamos tentar novamente...';
+              try{ rec.stop(); rec.start(); return; }catch(_){}
+              break;
+            case 'audio-capture':
+              msg = 'Nenhum microfone detectado. Verifique o dispositivo de entrada de áudio no sistema.';
+              break;
+            case 'network':
+              msg = 'Falha de rede no serviço de voz do navegador. Tente novamente.';
+              break;
+          }
+          transcriptionArea.value = msg;
+        };
+        rec.onend = () => {
+          fabMic.classList.remove('listening');
+          if (!transcriptionArea.value.trim()) {
+            transcriptionArea.value = 'Pronto. Fale sua pergunta ou digite.';
+          }
+        };
+      } catch (err) {
+        console.warn('Falha ao inicializar SpeechRecognition', err);
+      }
+    }
+
+    async function ensureMicPermission(){
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+      try{
+        const s = await navigator.mediaDevices.getUserMedia({audio:true});
+        // libera imediatamente
+        const tracks = s.getTracks(); tracks.forEach(t=>t.stop());
+        return true;
+      }catch(err){
+        console.warn('Permissão de microfone negada ou indisponível', err);
+        transcriptionArea.value = 'Não foi possível acessar o microfone. Verifique as permissões do navegador e do Windows.';
+        return false;
+      }
+    }
+
+    async function callAgent(message) {
+      const msg = (message || transcriptionArea.value || '').trim();
+      if (!msg) return;
+      transcriptionArea.value = 'Processando sua dúvida...';
+      transcriptionArea.disabled = true;
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        const data = await response.json();
+
+        if (data.response) {
+          transcriptionArea.value = data.response;
+          if (data.audio_b64) {
+            const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
+            audio.onended = () => {
+              if (voiceModal.classList.contains('active') && rec) {
+                try { rec.start(); } catch(e) {}
+              }
+            };
+            audio.play().catch(e => {
+              console.error("Erro ao reproduzir áudio:", e);
+              if (voiceModal.classList.contains('active') && rec) {
+                try { rec.start(); } catch(err) {}
+              }
+            });
+          } else {
+            if (voiceModal.classList.contains('active') && rec) {
+              try { rec.start(); } catch(err) {}
+            }
+          }
+        } else {
+          transcriptionArea.value = 'Desculpe, tive um problema para responder. Tente novamente.';
+        }
+      } catch (error) {
+        transcriptionArea.value = 'Erro de conexão. Verifique se o servidor está rodando.';
+      } finally {
+        transcriptionArea.disabled = false;
+      }
+    }
+
+    fabMic.addEventListener('click', async () => {
       voiceModal.classList.add('active');
       voiceModal.setAttribute('aria-hidden', 'false');
-      transcriptionArea.focus();
+      transcriptionArea.value = '';
+      if (rec) {
+        const ok = await ensureMicPermission();
+        if(!ok){ transcriptionArea.focus(); return; }
+        try { rec.start(); }
+        catch (err) {
+          console.warn('Falha ao iniciar STT', err);
+          transcriptionArea.value = 'Não foi possível acessar o microfone. Você pode digitar sua pergunta.';
+          transcriptionArea.focus();
+        }
+      } else if (!isSecureOrigin) {
+        transcriptionArea.value = 'Voz indisponível por HTTP/IP. Acesse via HTTPS ou em http://localhost. Você pode digitar sua pergunta.';
+        transcriptionArea.focus();
+      } else if (!SR) {
+        transcriptionArea.value = 'Seu navegador não suporta reconhecimento de voz; digite sua pergunta.';
+        transcriptionArea.focus();
+      } else {
+        transcriptionArea.focus();
+      }
     });
 
     closeModal.addEventListener('click', () => {
       voiceModal.classList.remove('active');
       voiceModal.setAttribute('aria-hidden', 'true');
       transcriptionArea.value = ''; // Limpa ao fechar
+      if (rec) { try { rec.stop(); } catch(_) {} }
     });
 
     // Enviar pergunta ao pressionar Enter
@@ -40,30 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const message = transcriptionArea.value.trim();
         if (!message) return;
-
-        // Feedback visual de carregamento
-        transcriptionArea.value = "Processando sua dúvida...";
-        transcriptionArea.disabled = true;
-
-        try {
-          const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: message })
-          });
-
-          const data = await response.json();
-          
-          if (data.response) {
-            transcriptionArea.value = data.response;
-          } else {
-            transcriptionArea.value = "Desculpe, tive um problema para responder. Tente novamente.";
-          }
-        } catch (error) {
-          transcriptionArea.value = "Erro de conexão. Verifique se o servidor está rodando.";
-        } finally {
-          transcriptionArea.disabled = false;
-        }
+        await callAgent(message);
       }
     });
   }

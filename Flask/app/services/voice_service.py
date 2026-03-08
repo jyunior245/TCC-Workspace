@@ -6,12 +6,13 @@ import os
 import tempfile
 
 class VoiceService:
-    def __init__(self):
+    def __init__(self, init_pygame=True):
         # Voz natural em português do Brasil
         self.voice = "pt-BR-FranciscaNeural"
         self.recognizer = sr.Recognizer()
         self.recognizer.pause_threshold = 1.2
-        pygame.mixer.init()
+        if init_pygame:
+            pygame.mixer.init()
 
     def listen(self):
         """Ouve o microfone do usuário e retorna o texto transcrito."""
@@ -54,6 +55,38 @@ class VoiceService:
     async def _generate_audio(self, text, output_file):
         communicate = edge_tts.Communicate(text, self.voice)
         await communicate.save(output_file)
+
+    def generate_base64_audio(self, text):
+        """Transforma texto em áudio natural e retorna em base64."""
+        import base64
+        if not text:
+            return None
+
+        cleaned = self._sanitize_text(text)
+        if not cleaned:
+            return None
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            temp_filename = fp.name
+
+        try:
+            # edge-tts é assíncrono
+            asyncio.run(self._generate_audio(cleaned, temp_filename))
+            
+            # Read file as base64
+            with open(temp_filename, "rb") as f:
+                audio_bytes = f.read()
+                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+            return audio_b64
+        except Exception as e:
+            print(f"Erro ao gerar áudio base64: {e}")
+            return None
+        finally:
+            if os.path.exists(temp_filename):
+                try:
+                    os.remove(temp_filename)
+                except Exception:
+                    pass
 
     def speak(self, text):
         """Transforma texto em áudio natural e reproduz imediatamente."""

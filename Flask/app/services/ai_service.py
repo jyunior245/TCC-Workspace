@@ -8,8 +8,8 @@ from app.extensions.sql_alchemy import db
 class HealthAgent:
     def __init__(self):
         # Localhost para velocidade máxima fora do Docker
-        self.ollama_url = "http://localhost:11434/api/generate"
-        self.llama_model = "llama3.2"
+        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+        self.llama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
     def get_response(self, message, user_id=None):
         # 1. CLASSIFICAÇÃO DE INTENÇÃO
@@ -84,6 +84,7 @@ class HealthAgent:
         else:
             rag_guidance = (
                 "Regras de Resposta (assunto geral):\n"
+                "- Capite a entornação de voz do usuário, se possível, para a melhor compreensão.\n"
                 "- Para assuntos não médicos, seja útil e direto; use o histórico apenas para personalizar.\n"
             )
 

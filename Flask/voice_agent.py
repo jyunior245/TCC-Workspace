@@ -14,9 +14,10 @@ from app.models.user import User
 
 def create_test_app():
     app = Flask(__name__)
-    if os.getenv('RUNNING_IN_DOCKER'):
+    in_docker = os.path.exists('/.dockerenv')
+    if os.getenv('RUNNING_IN_DOCKER') and in_docker:
         os.environ['DB_HOST'] = 'db'
-    elif os.getenv('DB_HOST') == 'db':
+    elif os.getenv('DB_HOST') == 'db' or not os.getenv('DB_HOST'):
         os.environ['DB_HOST'] = 'localhost'
 
     db_host = os.getenv("DB_HOST", "localhost")
@@ -29,6 +30,7 @@ def create_test_app():
     
     app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{safe_password}@{db_host}:5432/{db_name}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    print(f"[DB] Conectando em {db_host}:5432 como {db_user} no banco {db_name}")
     db.init_app(app)
     return app
 
@@ -51,7 +53,12 @@ def main():
     app = create_test_app()
     
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"Erro ao conectar ao Postgres: {e}")
+            print(f"Verifique DB_HOST={os.getenv('DB_HOST')}, POSTGRES_USER={os.getenv('POSTGRES_USER')}, DATABASE_NAME={os.getenv('DATABASE_NAME')}")
+            raise
         current_user_id = input("🆔 Digite um ID de Usuário para teste (ex: user_voice): ") or "user_voice"
         ensure_test_user(current_user_id)
         
