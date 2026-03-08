@@ -6,6 +6,7 @@ from app.routes.index import register_bp
 from app.routes.patient import patient_bp
 from app.routes.agent import agent_bp
 from app.routes.chat import chat_bp
+from app.routes.api import api_bp
 from app.extensions import db
 from app.models import init_db
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ def create_app():
     app.secret_key="supersecretkey"
 
     load_dotenv('.env')
+    
 
     # Configuração do banco de dados
     db_host = os.getenv("DB_HOST")
@@ -30,9 +32,15 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-    
+
     with app.app_context():
         init_db()
+        
+        # --- INICIALIZAÇÃO DO RAG ---
+        from app.services.rag_service import rag_service
+        print("🚀 Inicializando banco de dados vetorial...")
+        rag_service.load_pdf_protocols()
+    
 
     app.register_blueprint(index_bp)
     app.register_blueprint(login_bp)
@@ -40,6 +48,7 @@ def create_app():
     app.register_blueprint(patient_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(api_bp)
 
     return app
 

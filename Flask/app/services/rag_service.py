@@ -1,17 +1,22 @@
 import os
-from chromadb import PersistentClient
+from chromadb import PersistentClient, Settings
 from sentence_transformers import SentenceTransformer
 from pypdf import PdfReader
 
 class RAGService:
     def __init__(self):
-        self.db_path = os.path.join(os.getcwd(), "app", "data", "vector_db")
-        self.protocols_dir = os.path.join(os.getcwd(), "app", "data", "protocols")
+        # No rag_service.py
+        self.BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+        self.db_path = os.path.join(self.BASE_DIR, "data", "vector_db")
+        self.protocols_dir = os.path.join(self.BASE_DIR, "data", "protocols") 
         
         if not os.path.exists(self.db_path): os.makedirs(self.db_path)
         if not os.path.exists(self.protocols_dir): os.makedirs(self.protocols_dir)
             
-        self.client = PersistentClient(path=self.db_path)
+        self.client = PersistentClient(
+            path=self.db_path,
+            settings=Settings(anonymized_telemetry=False) # Desativa telemetria anônima (Versões mais recentes do ChromaDB)
+        )
         self.collection = self.client.get_or_create_collection(name="sus_protocols")
         
         try:
@@ -27,6 +32,11 @@ class RAGService:
         """Lê todos os PDFs na pasta de protocolos e os adiciona ao banco"""
         if self.offline_mode: return
         
+        # Verifica se o banco já tem dados para não reprocessar tudo
+        if self.collection.count() > 0:
+            print("✅ Banco vetorial já contém dados. Pulando carregamento inicial.")
+            return
+
         for filename in os.listdir(self.protocols_dir):
             if filename.endswith(".pdf"):
                 path = os.path.join(self.protocols_dir, filename)
