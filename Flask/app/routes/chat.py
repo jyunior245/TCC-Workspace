@@ -8,9 +8,12 @@ voice = VoiceService(init_pygame=False)
 
 @chat_bp.route('/api/chat', methods=['POST'])
 def chat():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized. Usuário não autenticado.'}), 401
+
+    user_id = session.get('user_id')
     data = request.get_json()
     user_message = data.get('message')
-    user_id = session.get('user_id') or "user_voice"
     
     if not user_message:
         return jsonify({'error': 'Mensagem vazia'}), 400

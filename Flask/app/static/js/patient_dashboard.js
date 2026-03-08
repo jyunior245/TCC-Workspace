@@ -99,6 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: msg })
         });
+
+        if (response.status === 401) {
+          transcriptionArea.value = 'Sua sessão expirou ou você não está logado. Por favor, faça login novamente para conversar.';
+          return;
+        }
+
         const data = await response.json();
 
         if (data.response) {

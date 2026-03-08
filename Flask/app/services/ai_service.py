@@ -20,7 +20,12 @@ class HealthAgent:
         if user_id:
             # Pega as últimas 5 mensagens do usuário
             last_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(5).all()
-            persistent_history = "\n".join([f"U: {c.message}\nA: {c.response}" for c in reversed(last_chats)])
+            persistent_history = "\n".join([f"Paciente: {c.message}\nVocê: {c.response}" for c in reversed(last_chats)])
+            print(f"[AI][MEMÓRIA] Recuperadas {len(last_chats)} interações anteriores do banco.")
+            if persistent_history:
+                print("--- HISTÓRICO INJETADO ---")
+                print(persistent_history)
+                print("--------------------------")
 
         # 3. BUSCA RAG (Apenas se a intenção for de saúde)
         context_sus = ""
@@ -70,22 +75,21 @@ class HealthAgent:
         system_rules = "Você é um assistente de saúde empático para idosos."
 
         if intent == "EMERGENCY":
-            system_rules += " ATENÇÃO: Possível emergência. Oriente buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."
+            system_rules += " ATENÇÃO: Possível emergência. Oriente o paciente a buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."
         elif intent == "GREETING":
             system_rules += " Responda cordialmente a saudações e incentive o autocuidado."
 
         if intent in ("HEALTH_QUERY", "EMERGENCY"):
             rag_guidance = (
                 "Regras de Resposta (priorizar RAG):\n"
-                "- Responda exclusivamente com base no CONTEXTO-BASE (Protocolos do SUS).\n"
-                "- Se o CONTEXTO-BASE não trouxer a resposta, diga que não encontrou nos protocolos e recomende procurar a UBS.\n"
-                "- Não invente informações, não dê diagnósticos; forneça orientações gerais e seguras.\n"
+                "- Responda dúvidas médicas exclusivamente com base no CONTEXTO-BASE (Protocolos do SUS).\n"
+                "- Se o CONTEXTO-BASE não trouxer a resposta para a dúvida de saúde, diga que não encontrou nos protocolos e recomende procurar a UBS.\n"
+                "- Não invente informações médicas nem dê diagnósticos; forneça orientações gerais e seguras.\n"
             )
         else:
             rag_guidance = (
                 "Regras de Resposta (assunto geral):\n"
-                "- Capite a entornação de voz do usuário, se possível, para a melhor compreensão.\n"
-                "- Para assuntos não médicos, seja útil e direto; use o histórico apenas para personalizar.\n"
+                "- Seja útil, direto e mantenha o papo agradável.\n"
             )
 
         fontes_instruction = ""
@@ -93,25 +97,23 @@ class HealthAgent:
             fontes_str = ", ".join(sources)
             fontes_instruction = f'Ao final da resposta, inclua a linha: "Fontes: {fontes_str}"'
 
+        history_section = ""
+        if history:
+            history_section = f"\nLembre-se do CONTEXTO da conversa até agora:\n{history}\n"
+
         return f"""
         {system_rules}
 
-        CONTEXTO-BASE (Protocolos do SUS):
-        {context or '[indisponível]'}
-
-        HISTÓRICO (apenas para personalização; não substitui protocolos):
-        {history}
-
         {rag_guidance}
 
-        FORMATO DA RESPOSTA:
-        - Responda diretamente em português brasileiro, em 2–5 frases claras.
-        - Não inclua rótulos como 'U:', 'A:', 'USUÁRIO:' ou 'ASSISTENTE:'.
-        - Não repita o conteúdo deste prompt.
-        - Não inclua linhas de fontes na resposta.
+        CONTEXTO-BASE (Protocolos do SUS):
+        {context or '[Nenhum protocolo específico para esta mensagem]'}
+        {history_section}
+        O paciente enviou uma nova mensagem. Responda diretamente ao paciente em 2–5 frases, mantendo a continuidade do assunto se for uma pergunta de seguimento.
+        IMPORTANTE: Não escreva 'Você:', 'Assistente:', 'Paciente:' nem qualquer outro prefixo na sua resposta. Comece a frase diretamente.
 
-        USUÁRIO: {message}
-        ASSISTENTE:"""
+        Nova mensagem do Paciente: {message}
+        Sua Resposta:"""
 
 
     def _needs_medical_analysis(self, text):
