@@ -19,9 +19,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabMic = document.getElementById('fabMic');
   const voiceModal = document.getElementById('voiceModal');
   const closeModal = document.getElementById('closeModal');
-  const transcriptionArea = document.getElementById('transcriptionArea');
+  const siriWave = document.getElementById('siriWave');
 
-  if (fabMic && voiceModal && closeModal && transcriptionArea) {
+  if (fabMic && voiceModal && closeModal && transcriptionText && chatInput && sendBtn) {
+    function updateTranscription(text) {
+      if (!text) return;
+      transcriptionText.innerHTML = '';
+      
+      const words = text.split(' ');
+      words.forEach((word, index) => {
+        const span = document.createElement('span');
+        // Adiciona um espaço após a palavra, preservando múltiplos espaços originais se houver, ou apenas um espaço normal
+        span.innerHTML = word + '&nbsp;';
+        // Atraso progressivo maior: 0.08s por palavra para uma entrada mais calma e gradual
+        span.style.animationDelay = `${index * 0.08}s`;
+        transcriptionText.appendChild(span);
+      });
+    }
+
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     let rec = null;
     const isSecureOrigin = location.protocol === 'https:' || location.hostname === 'localhost';
@@ -34,15 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.maxAlternatives = 1;
         rec.onstart = () => {
           fabMic.classList.add('listening');
-          transcriptionArea.value = 'Ouvindo...';
+          if (siriWave) { siriWave.classList.remove('idle'); siriWave.classList.add('active'); }
+          updateTranscription('Ouvindo...');
         };
         rec.onresult = (e) => {
+          if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
           const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
-          transcriptionArea.value = text;
+          updateTranscription(text);
           try { rec.stop(); } catch (_) {}
           callAgent(text);
         };
         rec.onerror = (e) => {
+          if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
           console.warn('STT error', e);
           let msg = 'Erro no reconhecimento de voz. Você pode digitar sua pergunta.';
           switch(e.error){
@@ -61,12 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
               msg = 'Falha de rede no serviço de voz do navegador. Tente novamente.';
               break;
           }
-          transcriptionArea.value = msg;
+          updateTranscription(msg);
         };
         rec.onend = () => {
           fabMic.classList.remove('listening');
-          if (!transcriptionArea.value.trim()) {
-            transcriptionArea.value = 'Pronto. Fale sua pergunta ou digite.';
+          if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
+          const currentText = transcriptionText.textContent.replace(/\u00A0/g, ' ').trim();
+          if (!currentText || currentText === 'Ouvindo...') {
+            updateTranscription('');
           }
         };
       } catch (err) {
@@ -83,16 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
       }catch(err){
         console.warn('Permissão de microfone negada ou indisponível', err);
-        transcriptionArea.value = 'Não foi possível acessar o microfone. Verifique as permissões do navegador e do Windows.';
+        updateTranscription('Não foi possível acessar o microfone. Verifique as permissões do navegador e do Windows.');
         return false;
       }
     }
 
     async function callAgent(message) {
-      const msg = (message || transcriptionArea.value || '').trim();
+      const msg = (message || '').trim();
       if (!msg) return;
-      transcriptionArea.value = 'Processando sua dúvida...';
-      transcriptionArea.disabled = true;
+      updateTranscription('Processando sua dúvida...');
+      chatInput.disabled = true;
+      sendBtn.disabled = true;
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -101,22 +122,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (response.status === 401) {
-          transcriptionArea.value = 'Sua sessão expirou ou você não está logado. Por favor, faça login novamente para conversar.';
+          updateTranscription('Sua sessão expirou ou você não está logado. Por favor, faça login novamente para conversar.');
           return;
         }
 
         const data = await response.json();
 
         if (data.response) {
-          transcriptionArea.value = data.response;
+          updateTranscription(data.response);
           if (data.audio_b64) {
             const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
+            if (siriWave) { siriWave.classList.remove('idle'); siriWave.classList.add('active'); }
             audio.onended = () => {
+              if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
               if (voiceModal.classList.contains('active') && rec) {
                 try { rec.start(); } catch(e) {}
               }
             };
             audio.play().catch(e => {
+              if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
               console.error("Erro ao reproduzir áudio:", e);
               if (voiceModal.classList.contains('active') && rec) {
                 try { rec.start(); } catch(err) {}
@@ -128,54 +152,66 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         } else {
-          transcriptionArea.value = 'Desculpe, tive um problema para responder. Tente novamente.';
+          updateTranscription('Desculpe, tive um problema para responder. Tente novamente.');
         }
       } catch (error) {
-        transcriptionArea.value = 'Erro de conexão. Verifique se o servidor está rodando.';
+        updateTranscription('Erro de conexão. Verifique se o servidor está rodando.');
       } finally {
-        transcriptionArea.disabled = false;
+        chatInput.disabled = false;
+        sendBtn.disabled = false;
+        chatInput.focus();
       }
     }
 
     fabMic.addEventListener('click', async () => {
       voiceModal.classList.add('active');
       voiceModal.setAttribute('aria-hidden', 'false');
-      transcriptionArea.value = '';
+      updateTranscription('');
       if (rec) {
         const ok = await ensureMicPermission();
-        if(!ok){ transcriptionArea.focus(); return; }
+        if(!ok){ chatInput.focus(); return; }
         try { rec.start(); }
         catch (err) {
           console.warn('Falha ao iniciar STT', err);
-          transcriptionArea.value = 'Não foi possível acessar o microfone. Você pode digitar sua pergunta.';
-          transcriptionArea.focus();
+          updateTranscription('Não foi possível acessar o microfone. Você pode digitar sua pergunta.');
+          chatInput.focus();
         }
       } else if (!isSecureOrigin) {
-        transcriptionArea.value = 'Voz indisponível por HTTP/IP. Acesse via HTTPS ou em http://localhost. Você pode digitar sua pergunta.';
-        transcriptionArea.focus();
+        updateTranscription('Voz indisponível por HTTP/IP. Acesse via HTTPS ou em http://localhost. Você pode digitar sua pergunta.');
+        chatInput.focus();
       } else if (!SR) {
-        transcriptionArea.value = 'Seu navegador não suporta reconhecimento de voz; digite sua pergunta.';
-        transcriptionArea.focus();
+        updateTranscription('Seu navegador não suporta reconhecimento de voz; digite sua pergunta.');
+        chatInput.focus();
       } else {
-        transcriptionArea.focus();
+        chatInput.focus();
       }
     });
 
     closeModal.addEventListener('click', () => {
       voiceModal.classList.remove('active');
       voiceModal.setAttribute('aria-hidden', 'true');
-      transcriptionArea.value = ''; // Limpa ao fechar
+      updateTranscription('');
+      chatInput.value = '';
       if (rec) { try { rec.stop(); } catch(_) {} }
     });
 
-    // Enviar pergunta ao pressionar Enter
-    transcriptionArea.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+    async function handleSend() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+      chatInput.value = '';
+      if (rec) { try { rec.stop(); } catch(e){} }
+      await callAgent(message);
+    }
+
+    chatInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        const message = transcriptionArea.value.trim();
-        if (!message) return;
-        await callAgent(message);
+        await handleSend();
       }
+    });
+
+    sendBtn.addEventListener('click', async () => {
+      await handleSend();
     });
   }
 

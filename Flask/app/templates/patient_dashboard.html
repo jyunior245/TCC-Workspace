@@ -21,22 +21,36 @@
         <button class="fab-mic" id="fabMic" aria-label="Falar com assistente">
           <span class="material-icons-outlined">mic</span>
         </button>
-        <div class="hint body-large">Toque para iniciar a conversa</div>
+        <div class="hint body-large"></div>
       </div>
 
-      <div class="modal-overlay" id="voiceModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Interação por voz">
+      <div class="modal-overlay" id="voiceModal" aria-hidden="true" role="dialog" aria-modal="true"
+        aria-label="Interação por voz">
         <div class="modal-card">
           <button class="icon-button modal-close" id="closeModal" aria-label="Fechar">
             <span class="material-icons-outlined">close</span>
           </button>
           <div class="modal-header title-large">Assistente</div>
-          <div class="status body-medium" id="voiceStatus" aria-live="polite">Toque para falar com o assistente</div>
-          <div class="waveform" aria-label="Capturando voz">
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="status body-medium" id="voiceStatus" aria-live="polite"></div>
+
+          <div class="transcription-display" id="transcriptionDisplay" aria-live="polite">
+            <div class="animated-text" id="transcriptionText"></div>
           </div>
-          <div class="transcription md-text-field">
-            <textarea id="transcriptionArea" rows="6" placeholder="Transcrição em tempo real"></textarea>
+
+          <div class="siri-wave-container idle" id="siriWave" aria-hidden="true">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+            <div class="wave wave4"></div>
+            <div class="wave wave5"></div>
+          </div>
+
+          <div class="chat-input-container">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Digite sua mensagem..."
+              aria-label="Sua mensagem">
+            <button class="icon-button send-btn" id="sendBtn" aria-label="Enviar mensagem">
+              <span class="material-icons-outlined">send</span>
+            </button>
           </div>
         </div>
       </div>
@@ -53,7 +67,13 @@
 
       <div class="calendar" id="calendar" aria-label="Calendário">
         <div class="calendar-grid header">
-          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          <div>Dom</div>
+          <div>Seg</div>
+          <div>Ter</div>
+          <div>Qua</div>
+          <div>Qui</div>
+          <div>Sex</div>
+          <div>Sáb</div>
         </div>
         <div class="calendar-grid body" id="calendarGrid"></div>
       </div>
