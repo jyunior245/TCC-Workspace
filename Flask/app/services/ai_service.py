@@ -7,9 +7,14 @@ from app.extensions.sql_alchemy import db
 
 class HealthAgent:
     def __init__(self):
-        # Localhost para velocidade máxima fora do Docker
-        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-        self.llama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
+        ollama_env = os.getenv("OLLAMA_URL")
+        if ollama_env:
+            self.ollama_url = ollama_env
+        elif os.getenv("RUNNING_IN_DOCKER"):
+            self.ollama_url = "http://ollama:11434/api/generate"
+        else:
+            self.ollama_url = "http://localhost:11434/api/generate"
+        self.llama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 
     def get_response(self, message, user_id=None):
         # 1. CLASSIFICAÇÃO DE INTENÇÃO
@@ -137,4 +142,4 @@ class HealthAgent:
             return res.json().get("response", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
             print(f"Erro no Llama: {e}")
-            return "Erro de conexão com o Llama 3.2 (Ollama). Verifique se ele está rodando."
+            return "Erro de conexão com o Llama 3.2:3b (Ollama). Verifique se ele está rodando."

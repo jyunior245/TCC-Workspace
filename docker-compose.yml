@@ -11,18 +11,28 @@ services:
       - .env
     environment:
       - RUNNING_IN_DOCKER=true
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${DATABASE_NAME}
     depends_on:
       - db
-      - ollama
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama_tcc
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
+  #ollama:
+  #  image: ollama/ollama:latest
+  #  deploy:
+  #    resources:
+  #      reservations:
+  #        devices:
+  #          - driver: nvidia
+  #
+  #            count: 1
+  #            capabilities: [gpu]
+  #  container_name: ollama_tcc
+  #  ports:
+  #    - "11434:11434"
+  #  volumes:
+  #    - ollama_data:/root/.ollama
 
   db:
     image: postgres:13
@@ -57,5 +67,5 @@ services:
 
 volumes:
   db_data: 
-  ollama_data:
+#  ollama_data:
   chroma_data:

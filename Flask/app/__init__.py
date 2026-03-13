@@ -6,7 +6,6 @@ from app.routes.index import register_bp
 from app.routes.patient import patient_bp
 from app.routes.agent import agent_bp
 from app.routes.chat import chat_bp
-from app.routes.api import api_bp
 from app.extensions import db
 from app.models import init_db
 from dotenv import load_dotenv
@@ -48,7 +47,6 @@ def create_app():
     app.register_blueprint(patient_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(chat_bp)
-    app.register_blueprint(api_bp)
 
     return app
 
