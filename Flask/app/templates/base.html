@@ -18,19 +18,17 @@
 </head>
 <body>
 
-    <div class="md-card">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="md-banner">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="md-banner">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-        {% block content %}{% endblock %}
-    </div>
+    {% block content %}{% endblock %}
 
     {% block scripts %}{% endblock %}
 </body>

@@ -43,10 +43,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update Bars
         bars.forEach((bar, index) => {
-            if (index < score - 1) { // -1 because length is basic
+            if (index < score - 1 || (score === 1 && index === 0)) { 
                 bar.style.backgroundColor = getColor(score);
+                bar.style.boxShadow = `0 0 10px ${getColor(score)}44`; // Added subtle glow
             } else {
-                bar.style.backgroundColor = 'var(--md-sys-color-surface-variant)';
+                bar.style.backgroundColor = '#e2e8f0'; // Matches background of strength-bars
+                bar.style.boxShadow = 'none';
             }
         });
 
@@ -67,15 +69,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getColor(score) {
-        if (score <= 2) return 'var(--md-sys-color-error)'; // Red
-        if (score <= 4) return '#FF9800'; // Orange
-        return '#4CAF50'; // Green
+        if (score <= 1) return '#ef4444'; // Red-500
+        if (score <= 2) return '#f97316'; // Orange-500
+        if (score <= 3) return '#eab308'; // Yellow-500
+        if (score <= 4) return '#22c55e'; // Green-500
+        return '#10b981'; // Emerald-500
     }
 
     function getText(score) {
         if (score === 0) return '';
+        if (score <= 1) return 'Muito Fraca';
         if (score <= 2) return 'Fraca';
-        if (score <= 4) return 'Média';
-        return 'Forte';
+        if (score <= 3) return 'Média';
+        if (score <= 4) return 'Forte';
+        return 'Muito Forte';
     }
 });

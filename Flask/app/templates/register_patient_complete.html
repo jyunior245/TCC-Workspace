@@ -2,56 +2,120 @@
 
 {% block title %}Cadastro Complementar - Paciente{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
 {% block content %}
-    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Dados Complementares</h2>
-    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Informações adicionais para pacientes</p>
-
-    <form action="/register/complete" method="POST">
-        <!-- Escolaridade -->
-        <div class="md-text-field">
-            <select name="education_level" id="education_level" required>
-                <option value="" disabled selected></option>
-                <option value="fundamental_incompleto">Fundamental Incompleto</option>
-                <option value="fundamental_completo">Fundamental Completo</option>
-                <option value="medio_completo">Médio Completo</option>
-                <option value="superior_completo">Superior Completo</option>
-            </select>
-            <label for="education_level">Escolaridade</label>
+<div class="auth-page-container">
+    <!-- DNA Helix + Vital Sign Background (Exclusive to Register) -->
+    <div class="register-exclusive-bg">
+        <div class="dna-container">
+            <svg class="dna-strand" viewBox="0 0 2000 300" preserveAspectRatio="none">
+                <defs>
+                    <pattern id="dna-pattern" x="0" y="0" width="250" height="300" patternUnits="userSpaceOnUse">
+                        <!-- Rungs connecting strands -->
+                        <line x1="125" y1="50" x2="125" y2="250" class="dna-rung" />
+                        <line x1="62" y1="100" x2="62" y2="200" class="dna-rung" />
+                        <line x1="187" y1="100" x2="187" y2="200" class="dna-rung" />
+                    </pattern>
+                </defs>
+                <!-- Double Helix Paths - Extended for seamlessness -->
+                <path class="dna-path dna-1" d="M0,150 C100,50 150,50 250,150 C350,250 400,250 500,150 C600,50 650,50 750,150 C850,250 900,250 1000,150 L2000,150" />
+                <path class="dna-path dna-2" d="M0,150 C100,250 150,250 250,150 C350,50 400,50 500,150 C600,250 650,250 750,150 C850,50 900,50 1000,150 L2000,150" />
+                
+                <!-- Repeat paths to fill width -->
+                <path class="dna-path dna-1" d="M1000,150 C1100,50 1150,50 1250,150 C1350,250 1400,250 1500,150 C1600,50 1650,50 1750,150 C1850,250 1900,250 2000,150" />
+                <path class="dna-path dna-2" d="M1000,150 C1100,250 1150,250 1250,150 C1350,50 1400,50 1500,150 C1600,250 1650,250 1750,150 C1850,50 1900,50 2000,150" />
+                
+                <!-- Explicit Connectors (Rungs) -->
+                <g class="dna-rungs">
+                    <line x1="125" y1="55" x2="125" y2="245" class="dna-rung" />
+                    <line x1="375" y1="55" x2="375" y2="245" class="dna-rung" />
+                    <line x1="625" y1="55" x2="625" y2="245" class="dna-rung" />
+                    <line x1="875" y1="55" x2="875" y2="245" class="dna-rung" />
+                    <line x1="1125" y1="55" x2="1125" y2="245" class="dna-rung" />
+                    <line x1="1375" y1="55" x2="1375" y2="245" class="dna-rung" />
+                    <line x1="1625" y1="55" x2="1625" y2="245" class="dna-rung" />
+                    <line x1="1875" y1="55" x2="1875" y2="245" class="dna-rung" />
+                </g>
+            </svg>
         </div>
 
-        <!-- Renda Mensal -->
-        <div class="md-text-field">
-            <input type="text" name="income" id="income" placeholder=" " required>
-            <label for="income">Renda Mensal (R$)</label>
+        <div class="molecular-nodes">
+            <div class="molecule" style="top: 20%; left: 15%;"></div>
+            <div class="molecule" style="top: 60%; left: 80%; animation-delay: -5s;"></div>
+            <div class="molecule" style="top: 10%; right: 10%; animation-delay: -2s;"></div>
         </div>
 
-        <!-- Condições de Moradia -->
-        <div class="md-text-field">
-            <input type="text" name="housing_conditions" id="housing_conditions" placeholder=" " required>
-            <label for="housing_conditions">Condições de Moradia</label>
-            <div class="md-helper-text">Ex: Alvenaria, 4 cômodos</div>
+        <!-- EKG Vital Sign sync with DNA -->
+        <div class="ekg-container" style="top: 50%; opacity: 0.3;">
+            <svg class="ekg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                <path class="ekg-path" d="M0,50 L200,50 L210,40 L220,60 L230,50 L240,50 L250,20 L260,80 L270,50 L500,50 L510,40 L520,60 L530,50 L700,50 L710,20 L720,80 L730,50 L1000,50" />
+            </svg>
+        </div>
+    </div>
+
+    <div class="health-icons-bg" style="opacity: 0.2;">
+        <span class="material-icons-outlined floating-icon" style="left: 10%; color: #10b981;">science</span>
+        <span class="material-icons-outlined floating-icon" style="left: 35%; color: #06b6d4;">medical_information</span>
+        <span class="material-icons-outlined floating-icon" style="left: 70%; color: #10b981;">health_and_safety</span>
+    </div>
+
+    <div class="auth-card" style="max-width: 600px;">
+        <div class="auth-header">
+            <h2 class="headline-large">Dados Complementares</h2>
+            <p class="body-large">Informações adicionais para pacientes</p>
         </div>
 
-        <!-- Acesso a Saneamento -->
-        <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
-            <input type="checkbox" name="sanitation_access" id="sanitation_access" style="width: 20px; height: 20px; accent-color: var(--md-sys-color-primary);">
-            <label for="sanitation_access" class="body-large" style="color: var(--md-sys-color-on-surface);">Acesso a Saneamento Básico</label>
-        </div>
+        <form action="/register/complete" method="POST" class="auth-form">
+            <!-- Escolaridade -->
+            <div class="md-text-field">
+                <select name="education_level" id="education_level" required>
+                    <option value="" disabled selected></option>
+                    <option value="fundamental_incompleto">Fundamental Incompleto</option>
+                    <option value="fundamental_completo">Fundamental Completo</option>
+                    <option value="medio_completo">Médio Completo</option>
+                    <option value="superior_completo">Superior Completo</option>
+                </select>
+                <label for="education_level">Escolaridade</label>
+            </div>
 
-        <!-- Situação de Trabalho -->
-        <div class="md-text-field">
-            <input type="text" name="work_status" id="work_status" placeholder=" " required>
-            <label for="work_status">Situação de Trabalho</label>
-        </div>
+            <!-- Renda Mensal -->
+            <div class="md-text-field">
+                <input type="text" name="income" id="income" placeholder=" " required>
+                <label for="income">Renda Mensal (R$)</label>
+            </div>
 
-        <!-- Contexto Familiar -->
-        <div class="md-text-field">
-            <textarea name="family_context" id="family_context" rows="4" placeholder=" "></textarea>
-            <label for="family_context">Contexto Familiar</label>
-        </div>
+            <!-- Condições de Moradia -->
+            <div class="md-text-field">
+                <input type="text" name="housing_conditions" id="housing_conditions" placeholder=" " required>
+                <label for="housing_conditions">Condições de Moradia</label>
+                <div class="md-helper-text">Ex: Alvenaria, 4 cômodos</div>
+            </div>
 
-        <button type="submit" class="md-button filled">
-            Finalizar Cadastro
-        </button>
-    </form>
+            <!-- Acesso a Saneamento -->
+            <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 360px;">
+                <input type="checkbox" name="sanitation_access" id="sanitation_access" style="width: 20px; height: 20px; accent-color: var(--md-sys-color-primary);">
+                <label for="sanitation_access" class="body-large" style="color: var(--md-sys-color-on-surface);">Acesso a Saneamento Básico</label>
+            </div>
+
+            <!-- Situação de Trabalho -->
+            <div class="md-text-field">
+                <input type="text" name="work_status" id="work_status" placeholder=" " required>
+                <label for="work_status">Situação de Trabalho</label>
+            </div>
+
+            <!-- Contexto Familiar -->
+            <div class="md-text-field">
+                <textarea name="family_context" id="family_context" rows="4" placeholder=" "></textarea>
+                <label for="family_context">Contexto Familiar</label>
+            </div>
+
+            <button type="submit" class="md-button filled">
+                Finalizar Cadastro
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}

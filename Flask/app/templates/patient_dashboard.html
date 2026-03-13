@@ -7,140 +7,184 @@
 {% endblock %}
 
 {% block content %}
-<header class="app-bar" role="banner" aria-label="Barra de aplicativo">
-  <div class="app-bar__title">Paciente</div>
-  <button class="icon-button" aria-label="Sair" onclick="window.location.href='/logout'">
-    <span class="material-icons-outlined">logout</span>
-  </button>
-</header>
-
-<main class="tabs-container" role="main">
-  <section class="tabs-content">
-    <div class="tab-panel active" id="tab-ai" role="tabpanel" aria-labelledby="nav-ai">
-      <div class="ai-center">
-        <button class="fab-mic" id="fabMic" aria-label="Falar com assistente">
-          <span class="material-icons-outlined">mic</span>
-        </button>
-        <div class="hint body-large"></div>
+<div class="dashboard-container">
+  <!-- Sidebar for Desktop -->
+  <aside class="sidebar" role="navigation" aria-label="Navegação Lateral">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="material-icons-outlined">health_and_safety</span>
+        <span class="logo-text">TCC Health</span>
       </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" data-target="tab-ai">
+        <span class="material-icons-outlined">record_voice_over</span>
+        <span>Assistente</span>
+      </button>
+      <button class="nav-btn" data-target="tab-schedule">
+        <span class="material-icons-outlined">event</span>
+        <span>Agenda</span>
+      </button>
+      <button class="nav-btn" data-target="tab-reports">
+        <span class="material-icons-outlined">insert_chart</span>
+        <span>Relatórios</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-btn logout" onclick="window.location.href='/logout'">
+        <span class="material-icons-outlined">logout</span>
+        <span>Sair</span>
+      </button>
+    </div>
+  </aside>
 
-      <div class="modal-overlay" id="voiceModal" aria-hidden="true" role="dialog" aria-modal="true"
-        aria-label="Interação por voz">
-        <div class="modal-card">
-          <button class="icon-button modal-close" id="closeModal" aria-label="Fechar">
-            <span class="material-icons-outlined">close</span>
-          </button>
-          <div class="modal-header title-large">Assistente</div>
-          <div class="status body-medium" id="voiceStatus" aria-live="polite"></div>
+  <div class="main-content">
+    <header class="app-bar" role="banner" aria-label="Barra de aplicativo">
+      <div class="app-bar__title">Dashboard do Paciente</div>
+      <div class="user-profile">
+        <span class="user-name">Paciente</span>
+        <div class="user-avatar">P</div>
+      </div>
+    </header>
 
-          <div class="transcription-display" id="transcriptionDisplay" aria-live="polite">
-            <div class="animated-text" id="transcriptionText"></div>
+    <main class="tabs-container" role="main">
+      <section class="tabs-content">
+        <!-- AI Tab -->
+        <div class="tab-panel active" id="tab-ai" role="tabpanel" aria-labelledby="nav-ai">
+          <div class="ai-section">
+            <div class="ai-header">
+              <h2 class="headline-small">Seu Assistente Pessoal</h2>
+              <p class="body-medium">Como posso ajudar você hoje?</p>
+            </div>
+            
+            <div class="ai-center-container">
+              <div class="ai-center">
+                <button class="fab-mic" id="fabMic" aria-label="Falar com assistente">
+                  <span class="material-icons-outlined">mic</span>
+                </button>
+                <div class="hint body-large">Clique para falar</div>
+              </div>
+            </div>
+
+            <div class="modal-overlay" id="voiceModal" aria-hidden="true" role="dialog" aria-modal="true"
+              aria-label="Interação por voz">
+              <div class="modal-card">
+                <button class="icon-button modal-close" id="closeModal" aria-label="Fechar">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+                <div class="modal-header title-large">Assistente</div>
+                <div class="status body-medium" id="voiceStatus" aria-live="polite"></div>
+
+                <div class="transcription-display" id="transcriptionDisplay" aria-live="polite">
+                  <div class="animated-text" id="transcriptionText"></div>
+                </div>
+
+                <div class="siri-wave-container idle" id="siriWave" aria-hidden="true">
+                  <div class="wave wave1"></div>
+                  <div class="wave wave2"></div>
+                  <div class="wave wave3"></div>
+                  <div class="wave wave4"></div>
+                  <div class="wave wave5"></div>
+                </div>
+
+                <div class="chat-input-container">
+                  <input type="text" id="chatInput" class="chat-input" placeholder="Digite sua mensagem..."
+                    aria-label="Sua mensagem">
+                  <button class="icon-button send-btn" id="sendBtn" aria-label="Enviar mensagem">
+                    <span class="material-icons-outlined">send</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div class="siri-wave-container idle" id="siriWave" aria-hidden="true">
-            <div class="wave wave1"></div>
-            <div class="wave wave2"></div>
-            <div class="wave wave3"></div>
-            <div class="wave wave4"></div>
-            <div class="wave wave5"></div>
-          </div>
+        <!-- Schedule Tab -->
+        <div class="tab-panel" id="tab-schedule" role="tabpanel" aria-labelledby="nav-schedule" aria-hidden="true">
+          <div class="schedule-view">
+            <div class="schedule-header">
+              <h2 class="headline-small">Sua Agenda</h2>
+              <div class="tabs-inline" role="tablist" aria-label="Filtro de período">
+                <button class="chip filter-chip active" data-view="month" aria-selected="true">Mês</button>
+                <button class="chip filter-chip" data-view="week" aria-selected="false">Semana</button>
+              </div>
+            </div>
 
-          <div class="chat-input-container">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Digite sua mensagem..."
-              aria-label="Sua mensagem">
-            <button class="icon-button send-btn" id="sendBtn" aria-label="Enviar mensagem">
-              <span class="material-icons-outlined">send</span>
+            <div class="schedule-grid">
+              <div class="calendar-card">
+                <div class="calendar" id="calendar" aria-label="Calendário">
+                  <div class="calendar-grid header">
+                    <div>Dom</div>
+                    <div>Seg</div>
+                    <div>Ter</div>
+                    <div>Qua</div>
+                    <div>Qui</div>
+                    <div>Sex</div>
+                    <div>Sáb</div>
+                  </div>
+                  <div class="calendar-grid body" id="calendarGrid"></div>
+                </div>
+              </div>
+
+              <div class="events-card">
+                <div class="events-section">
+                  <div class="section-title title-medium">Próximos eventos</div>
+
+                  <div class="list-state" id="eventsLoading">
+                    <div class="card shimmer"></div>
+                    <div class="card shimmer"></div>
+                  </div>
+
+                  <div class="list-state hidden" id="eventsEmpty">
+                    <div class="empty body-large">Nenhum evento agendado</div>
+                  </div>
+
+                  <div class="cards" id="eventsList" aria-live="polite"></div>
+                </div>
+              </div>
+            </div>
+
+            <button class="fab-add" id="fabAddEvent" aria-label="Adicionar agendamento">
+              <span class="material-icons-outlined">add</span>
             </button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="tab-panel" id="tab-schedule" role="tabpanel" aria-labelledby="nav-schedule" aria-hidden="true">
-      <div class="schedule-header">
-        <div class="headline-small">Agenda</div>
-        <div class="tabs-inline" role="tablist" aria-label="Filtro de período">
-          <button class="chip filter-chip active" data-view="month" aria-selected="true">Mês</button>
-          <button class="chip filter-chip" data-view="week" aria-selected="false">Semana</button>
-        </div>
-      </div>
+        <!-- Reports Tab -->
+        <div class="tab-panel" id="tab-reports" role="tabpanel" aria-labelledby="nav-reports" aria-hidden="true">
+          <div class="reports-view">
+            <div class="reports-header">
+              <h2 class="headline-small">Seus Relatórios</h2>
+              <div class="reports-actions">
+                <button class="btn btn-outlined" data-action="export-pdf">
+                  <span class="material-icons-outlined" style="font-size: 18px;">download</span>
+                  Exportar PDF
+                </button>
+                <button class="btn btn-outlined" data-action="export-csv">
+                  <span class="material-icons-outlined" style="font-size: 18px;">table_chart</span>
+                  Exportar CSV
+                </button>
+              </div>
+            </div>
 
-      <div class="calendar" id="calendar" aria-label="Calendário">
-        <div class="calendar-grid header">
-          <div>Dom</div>
-          <div>Seg</div>
-          <div>Ter</div>
-          <div>Qua</div>
-          <div>Qui</div>
-          <div>Sex</div>
-          <div>Sáb</div>
-        </div>
-        <div class="calendar-grid body" id="calendarGrid"></div>
-      </div>
+            <div class="reports-grid">
+              <div class="list-state" id="reportsLoading">
+                <div class="card shimmer"></div>
+                <div class="card shimmer"></div>
+              </div>
 
-      <div class="events-section">
-        <div class="section-title title-medium">Próximos eventos</div>
+              <div class="list-state hidden" id="reportsEmpty">
+                <div class="empty body-large">Nenhum relatório gerado ainda</div>
+              </div>
 
-        <div class="list-state" id="eventsLoading">
-          <div class="card shimmer"></div>
-          <div class="card shimmer"></div>
-          <div class="card shimmer"></div>
-        </div>
-
-        <div class="list-state hidden" id="eventsEmpty">
-          <div class="empty body-large">Nenhum evento para o período selecionado</div>
-        </div>
-
-        <div class="cards" id="eventsList" aria-live="polite"></div>
-      </div>
-
-      <button class="fab-add" id="fabAddEvent" aria-label="Adicionar agendamento">
-        <span class="material-icons-outlined">add</span>
-      </button>
-    </div>
-
-    <div class="tab-panel" id="tab-reports" role="tabpanel" aria-labelledby="nav-reports" aria-hidden="true">
-      <div class="reports-appbar">
-        <div class="headline-small">Relatórios</div>
-        <div class="menu">
-          <button class="icon-button" id="menuExport" aria-haspopup="menu" aria-label="Mais opções">
-            <span class="material-icons-outlined">more_vert</span>
-          </button>
-          <div class="menu-surface" id="exportMenu" role="menu" aria-hidden="true">
-            <button role="menuitem" class="menu-item" data-action="export-pdf">Exportar PDF</button>
-            <button role="menuitem" class="menu-item" data-action="export-csv">Exportar CSV</button>
+              <div class="reports-list" style="display: contents;" id="reportsList"></div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="list-state" id="reportsLoading">
-        <div class="card shimmer"></div>
-        <div class="card shimmer"></div>
-      </div>
-
-      <div class="list-state hidden" id="reportsEmpty">
-        <div class="empty body-large">Nenhum relatório disponível</div>
-      </div>
-
-      <div class="reports-list" id="reportsList"></div>
-    </div>
-  </section>
-</main>
-
-<nav class="bottom-nav" role="tablist" aria-label="Navegação">
-  <button class="nav-item active" id="nav-ai" data-target="tab-ai" aria-selected="true">
-    <span class="material-icons-outlined">record_voice_over</span>
-    <span class="label">Assistente</span>
-  </button>
-  <button class="nav-item" id="nav-schedule" data-target="tab-schedule" aria-selected="false">
-    <span class="material-icons-outlined">event</span>
-    <span class="label">Agenda</span>
-  </button>
-  <button class="nav-item" id="nav-reports" data-target="tab-reports" aria-selected="false">
-    <span class="material-icons-outlined">insert_chart</span>
-    <span class="label">Relatórios</span>
-  </button>
-</nav>
+      </section>
+    </main>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

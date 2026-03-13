@@ -2,29 +2,59 @@
 
 {% block title %}Login{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
 {% block content %}
-    <h2 class="headline-large" style="margin-top: 0; margin-bottom: 24px; color: var(--md-sys-color-primary);">Bem-vindo</h2>
-    <p class="body-large" style="margin-bottom: 32px; color: var(--md-sys-color-on-surface-variant);">Faça login para continuar</p>
-
-    <form action="/login" method="POST">
-        <!-- Email -->
-        <div class="md-text-field">
-            <input type="email" name="email" id="email" placeholder=" " required>
-            <label for="email">E-mail</label>
-        </div>
-
-        <!-- Senha -->
-        <div class="md-text-field">
-            <input type="password" name="password" id="password" placeholder=" " required>
-            <label for="password">Senha</label>
-        </div>
-
-        <button type="submit" class="md-button filled">
-            Entrar
-        </button>
-    </form>
-
-    <div style="text-align: center; margin-top: 24px;">
-        <a href="/register" class="md-button text">Criar nova conta</a>
+<div class="auth-page-container">
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
     </div>
+    
+    <div class="ekg-container">
+        <svg class="ekg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+            <path class="ekg-path" d="M0,50 L200,50 L210,40 L220,60 L230,50 L240,50 L250,20 L260,80 L270,50 L500,50 L510,40 L520,60 L530,50 L700,50 L710,20 L720,80 L730,50 L1000,50" />
+        </svg>
+    </div>
+
+    <div class="health-icons-bg">
+        <span class="material-icons-outlined floating-icon" style="left: 10%; animation-delay: 0s;">favorite</span>
+        <span class="material-icons-outlined floating-icon" style="left: 30%; animation-delay: -3s;">medical_services</span>
+        <span class="material-icons-outlined floating-icon" style="left: 60%; animation-delay: -6s;">vaccines</span>
+        <span class="material-icons-outlined floating-icon" style="left: 85%; animation-delay: -9s;">healing</span>
+        <span class="material-icons-outlined floating-icon" style="left: 20%; animation-delay: -2s;">medication</span>
+        <span class="material-icons-outlined floating-icon" style="left: 50%; animation-delay: -5s;">stethoscope</span>
+    </div>
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2 class="headline-large">Bem-vindo</h2>
+            <p class="body-large">Faça login para continuar</p>
+        </div>
+
+        <form action="/login" method="POST" class="auth-form">
+            <!-- Email -->
+            <div class="md-text-field">
+                <input type="email" name="email" id="email" placeholder=" " required>
+                <label for="email">E-mail</label>
+            </div>
+
+            <!-- Senha -->
+            <div class="md-text-field">
+                <input type="password" name="password" id="password" placeholder=" " required>
+                <label for="password">Senha</label>
+            </div>
+
+            <button type="submit" class="md-button filled">
+                Entrar
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <a href="/register" class="md-button text">Criar nova conta</a>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1,0 +1,412 @@
+/* Auth Pages Styling - REVERTED TO FIRST ANIMATION DESIGN (Simple Blobs) */
+
+html, body {
+  background-color: #fcfaff; /* Soft lavender-white tint */
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+.auth-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: transparent; /* Let body bg show through */
+  position: relative;
+}
+
+/* Animated Background Elements - "Aurora Health" Palette */
+.bg-blobs {
+  position: fixed;
+  width: 120vw;
+  height: 120vh;
+  top: -10vh;
+  left: -10vw;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  filter: blur(100px); /* Even deeper blur for premium diffusion */
+  animation: floatBlobs 30s infinite alternate ease-in-out;
+  opacity: 0.35;
+  mix-blend-mode: multiply; /* Better color interaction on light bg */
+}
+
+.blob-1 { 
+  top: -200px; 
+  left: -100px; 
+  background: radial-gradient(circle at center, 
+    rgba(6, 182, 212, 0.4) 0%, 
+    rgba(34, 211, 238, 0.2) 40%, 
+    transparent 70%); /* Deep Cyan to Light Cyan */
+}
+
+.blob-2 { 
+  bottom: -200px; 
+  right: -100px; 
+  background: radial-gradient(circle at center, 
+    rgba(99, 102, 241, 0.35) 0%, 
+    rgba(168, 85, 247, 0.15) 50%, 
+    transparent 70%); /* Indigo to Violet */
+  animation-delay: -10s; 
+}
+
+.blob-3 { 
+  top: 20%; 
+  left: 40%; 
+  width: 500px; 
+  height: 500px; 
+  background: radial-gradient(circle at center, 
+    rgba(16, 185, 129, 0.25) 0%, 
+    rgba(5, 150, 105, 0.1) 40%, 
+    transparent 70%); /* Emerald Health Green */
+  animation-duration: 35s; 
+}
+
+@keyframes floatBlobs {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(100px, 150px) scale(1.2) rotate(15deg); }
+  100% { transform: translate(-50px, -80px) scale(0.8) rotate(-15deg); }
+}
+
+.health-icons-bg {
+  position: fixed;
+  width: 120vw;
+  height: 120vh;
+  top: -10vh;
+  left: -10vw;
+  z-index: 2;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.floating-icon {
+  position: absolute;
+  color: #6366f1; /* More vibrant Indigo */
+  opacity: 0.25;
+  font-size: 52px;
+  animation: floatIcons 20s infinite linear;
+}
+
+@keyframes floatIcons {
+  0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.25; }
+  90% { opacity: 0.25; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+
+/* --- Sophisticated DNA Helix (Registration Exclusive) --- */
+.register-exclusive-bg {
+  position: fixed;
+  inset: -10vh -10vw;
+  width: 120vw;
+  height: 120vh;
+  background: #fdfdfd;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.dna-container {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 200%; /* Wider for seamless flow */
+  height: 300px;
+  transform: translateY(-50%) rotate(-5deg);
+  opacity: 0.12;
+  z-index: 1;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.2));
+}
+
+.dna-strand {
+  width: 100%;
+  height: 100%;
+}
+
+.dna-path {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.dna-1 { 
+  stroke: #10b981;
+  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5));
+}
+
+.dna-2 { 
+  stroke: #06b6d4;
+  filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.5));
+}
+
+.dna-rung {
+  stroke: rgba(16, 185, 129, 0.3);
+  stroke-width: 2;
+  stroke-dasharray: 2, 4;
+}
+
+.dna-path, .dna-rung {
+  animation: dnaFlow 20s infinite linear;
+}
+
+@keyframes dnaFlow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.molecule {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), transparent 80%),
+              rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 50%;
+  filter: blur(1px);
+  animation: moleculeFloat 15s infinite alternate ease-in-out;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+@keyframes moleculeFloat {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.3; }
+  100% { transform: translate(100px, 80px) scale(1.8) rotate(360deg); opacity: 0.7; }
+}
+
+/* --- EKG Vital Sign Animation (Unified Background) --- */
+.ekg-container {
+  position: fixed;
+  top: 50%;
+  left: -10vw;
+  width: 120vw;
+  height: 120px;
+  transform: translateY(-50%);
+  z-index: 3;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+/* --- EKG Vital Sign Animation (Login Only) --- */
+.ekg-container {
+  position: fixed;
+  top: 50%;
+  left: -10vw;
+  width: 120vw;
+  height: 120px;
+  transform: translateY(-50%);
+  z-index: 3;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.ekg-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ekg-path {
+  stroke: #06b6d4; /* Vibrant Cyan/Teal for vitality */
+  stroke-width: 4;
+  fill: none;
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: ekgDraw 5s infinite linear;
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.3));
+}
+
+@keyframes ekgDraw {
+  0% { stroke-dashoffset: 2000; }
+  50% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -2000; }
+}
+
+.auth-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 48px 40px;
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.08),
+    0 0 40px rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  
+  /* Page Transition Animation - "Dreamy" Slow Blur Effect */
+  animation: cardEntry 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+  transform: translateY(40px);
+  filter: blur(15px);
+}
+
+@keyframes cardEntry {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+    filter: blur(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.auth-header h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary, #6750a4);
+  letter-spacing: -0.5px;
+}
+
+.auth-header p {
+  margin: 8px 0 0;
+  color: #49454f;
+  font-size: 16px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+  gap: 8px;
+  width: 100%;
+}
+
+/* MD3 Inputs with high contrast for Light Theme */
+.md-text-field {
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 360px; /* Limit width for better visual centering */
+}
+
+.md-text-field label {
+  background-color: #fff !important;
+  color: #49454f !important;
+  padding: 0 4px !important;
+}
+
+.md-text-field input {
+  color: #1c1b1f !important;
+  border: 2px solid #79747e !important; /* Visible medium gray border */
+  background-color: #fff !important;
+  height: 56px !important;
+  border-radius: 4px !important;
+  padding: 0 16px !important;
+}
+
+.md-text-field input:focus {
+  border-color: var(--md-sys-color-primary, #6750a4) !important;
+  background-color: #f8fafc !important;
+}
+
+.md-text-field input:focus + label {
+  color: var(--md-sys-color-primary, #6750a4) !important;
+}
+
+.auth-footer {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.auth-form .md-button {
+  margin-top: 16px;
+  height: 52px;
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: none;
+  width: 100%;
+  max-width: 360px; /* Match input width */
+}
+/* Password Strength Meter - PREMIUM REDESIGN */
+.password-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0;
+  width: 100%;
+  max-width: 380px;
+}
+
+.req-chip {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+}
+
+.req-chip i {
+  font-size: 14px;
+}
+
+.req-chip.valid {
+  background-color: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+  box-shadow: 0 2px 4px rgba(22, 101, 52, 0.05);
+}
+
+.req-chip.valid i {
+  color: #22c55e;
+}
+
+.password-strength-container {
+  width: 100%;
+  max-width: 380px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.strength-bars {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  height: 8px; /* Thicker for better visibility */
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.strength-bar {
+  flex: 1;
+  height: 100%;
+  border-radius: 6px;
+  background-color: transparent;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.strength-text {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

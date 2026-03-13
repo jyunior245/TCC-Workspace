@@ -1,18 +1,33 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+  const allNavItems = document.querySelectorAll('.nav-item, .nav-btn:not(.logout)');
   const panels = document.querySelectorAll('.tab-panel');
-  navItems.forEach(btn => {
+
+  allNavItems.forEach(btn => {
     btn.addEventListener('click', () => {
-      navItems.forEach(b => b.classList.remove('active'));
-      panels.forEach(p => {
-        p.classList.remove('active');
-        p.setAttribute('aria-hidden', 'true');
+      const targetId = btn.dataset.target;
+      if (!targetId) return;
+
+      // Update active state for all navigation items pointing to the same target
+      allNavItems.forEach(b => {
+        if (b.dataset.target === targetId) {
+          b.classList.add('active');
+          b.setAttribute('aria-selected', 'true');
+        } else {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        }
       });
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      const target = document.getElementById(btn.dataset.target);
-      target.classList.add('active');
-      target.removeAttribute('aria-hidden');
+
+      // Show the selected panel
+      panels.forEach(p => {
+        if (p.id === targetId) {
+          p.classList.add('active');
+          p.removeAttribute('aria-hidden');
+        } else {
+          p.classList.remove('active');
+          p.setAttribute('aria-hidden', 'true');
+        }
+      });
     });
   });
 
@@ -324,7 +339,7 @@ function cardReport(c) {
     <div class="body-medium">${c.period}</div>
     <div class="body-large" style="margin-top:8px">${c.metrics}</div>
     <div class="actions">
-      <button class="md-button filled btn-details">Ver Detalhes</button>
+      <button class="btn btn-tonal btn-details">Ver Detalhes</button>
     </div>
   </div>`;
 }
