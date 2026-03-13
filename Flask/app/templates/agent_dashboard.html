@@ -1,19 +1,290 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Painel do Agente de Saúde</title>
-    <style>
-        body { font-family: Arial; background: #e8f5e9; }
-        .container { width: 80%; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; }
-        h1 { color: #2e7d32; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Bem-vindo, Agente de Saúde!</h1>
-        <p>Esta é a área administrativa para agentes.</p>
-        <a href="/login">Sair</a>
+{% extends "base.html" %}
+
+{% block title %}Painel do ACS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Navigation Drawer (Sidebar) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="material-icons-outlined">medical_services</span>
+                <span class="logo-text">ACS Gestão</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="nav-item active">
+                <span class="material-icons-outlined">people</span>
+                <span>Meus Pacientes</span>
+            </button>
+            <button class="nav-item">
+                <span class="material-icons-outlined">assignment</span>
+                <span>Relatórios Pendentes</span>
+            </button>
+            <button class="nav-item">
+                <span class="material-icons-outlined">settings</span>
+                <span>Configurações</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-item">
+                <span class="material-icons-outlined">logout</span>
+                <span>Sair</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <!-- Top App Bar -->
+        <header class="app-bar">
+            <div class="app-bar-title">
+                <h1>Painel do Agente</h1>
+                <p>Bem-vindo, {{ agent_name }}</p>
+            </div>
+            <div class="user-profile">
+                <span class="body-medium">ACS Profissional</span>
+                <div class="user-avatar">{{ agent_name[0] if agent_name else 'A' }}</div>
+            </div>
+        </header>
+
+        <div class="sections-container">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            <span class="material-icons-outlined">
+                                {{ 'check_circle' if category == 'success' else 'error_outline' }}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Link Patient Section -->
+            <section class="section">
+                <div class="md-card elevated">
+                    <h2 class="card-title">
+                        <span class="material-icons-outlined">person_add</span>
+                        Vincular Novo Paciente
+                    </h2>
+                    <p class="body-medium" style="margin-bottom: 24px; color: var(--md-sys-color-on-surface-variant);">
+                        Insira o código de 6 dígitos que o paciente gerou no aplicativo dele.
+                    </p>
+                    
+                    <form action="{{ url_for('agent.link_patient') }}" method="POST" style="display: flex; gap: 16px; align-items: flex-end;">
+                        <div class="md-text-field" style="max-width: 300px;">
+                            <input type="text" name="patient_code" id="patient_code" placeholder=" " required maxlength="6" style="text-transform: uppercase;">
+                            <label for="patient_code">Código do Paciente</label>
+                        </div>
+                        <button type="submit" class="md-button filled">
+                            <span class="material-icons-outlined">link</span>
+                            Vincular Paciente
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Patients List Section -->
+            <section class="section">
+                <h2 class="title-large" style="margin-bottom: 16px; font-weight: 400;">Meus Pacientes ({{ patients|length }})</h2>
+                
+                {% if patients %}
+                <div class="patients-grid">
+                    {% for patient in patients %}
+                    <div class="md-card elevated patient-card">
+                        <div class="patient-header">
+                            <div class="patient-initial">{{ patient.user.name[0] }}</div>
+                            <div class="patient-name-info">
+                                <h3>{{ patient.user.name }}</h3>
+                                <p>CÓDIGO: {{ patient.patient_code }}</p>
+                            </div>
+                        </div>
+                        <div class="patient-actions">
+                            <button class="md-button tonal" onclick="showReports('{{ patient.id }}', '{{ patient.user.name }}')">
+                                <span class="material-icons-outlined">history</span>
+                                Histórico
+                            </button>
+                            <button class="md-button filled" onclick="generateNow('{{ patient.id }}', '{{ patient.user.name }}')">
+                                <span class="material-icons-outlined">auto_awesome</span>
+                                Resumo IA
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="md-card" style="text-align: center; padding: 64px; border-style: dashed;">
+                    <span class="material-icons-outlined" style="font-size: 48px; color: var(--md-sys-color-outline); margin-bottom: 16px;">people_outline</span>
+                    <p class="body-large">Nenhum paciente vinculado ainda.</p>
+                    <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">Use o formulário acima para adicionar seu primeiro paciente.</p>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+    </main>
+</div>
+
+<!-- Modal de Relatórios Repensado -->
+<div class="modal-scrim" id="reportModalScrim">
+    <div class="modal-container">
+        <header class="modal-header">
+            <h2 id="modalTitle">Relatório de Saúde</h2>
+            <button class="modal-close-btn" onclick="closeModal()">
+                <span class="material-icons-outlined">close</span>
+            </button>
+        </header>
+        
+        <div id="modalLoader" style="display: none; height: 100%; align-items: center; justify-content: center; flex-direction: column; gap: 16px;">
+            <div class="spinner" style="width: 40px; height: 40px; border: 4px solid var(--md-sys-color-surface-variant); border-top-color: var(--md-sys-color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <p class="body-medium">A IA está gerando o resumo...</p>
+        </div>
+
+        <div class="modal-content" id="modalContent">
+            <div class="report-markdown" id="modalMarkdownBody">
+                <!-- Conteúdo vai aqui -->
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+    const scrim = document.getElementById('reportModalScrim');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalMarkdownBody');
+    const loader = document.getElementById('modalLoader');
+    const content = document.getElementById('modalContent');
+
+    function closeModal() {
+        scrim.classList.remove('active');
+    }
+
+    // Fecha ao clicar fora
+    scrim.addEventListener('click', (e) => {
+        if (e.target === scrim) closeModal();
+    });
+
+    let currentHistory = [];
+    let currentPatientName = '';
+    let currentPatientId = '';
+
+    async function generateNow(patientId, name) {
+        currentPatientId = patientId;
+        currentPatientName = name;
+        modalTitle.innerText = `Gerando Resumo: ${name}`;
+        modalBody.innerHTML = '';
+        loader.style.display = 'flex';
+        content.style.display = 'none';
+        scrim.classList.add('active');
+
+        try {
+            const response = await fetch(`/agent/generate_report/${patientId}`, { method: 'POST' });
+            const data = await response.json();
+            
+            loader.style.display = 'none';
+            content.style.display = 'block';
+
+            if (data.success) {
+                modalTitle.innerText = `Resumo de Hoje: ${name}`;
+                modalBody.innerHTML = marked.parse(data.report);
+            } else if (data.already_exists) {
+                modalTitle.innerText = `Relatório já existente: ${name}`;
+                modalBody.innerHTML = `
+                    <div style="background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-outlined">info</span>
+                        <span>${data.message}</span>
+                    </div>
+                    ${marked.parse(data.report)}
+                `;
+            } else {
+                modalBody.innerHTML = `<p style="color: var(--md-sys-color-error);">${data.message}</p>`;
+            }
+        } catch (e) {
+            loader.style.display = 'none';
+            content.style.display = 'block';
+            modalBody.innerHTML = '<p>Erro de conexão ao gerar relatório.</p>';
+        }
+    }
+
+    async function showReports(patientId, name) {
+        currentPatientId = patientId;
+        currentPatientName = name;
+        modalTitle.innerText = `Histórico de Relatórios: ${name}`;
+        modalBody.innerHTML = '';
+        loader.style.display = 'flex';
+        content.style.display = 'none';
+        scrim.classList.add('active');
+
+        try {
+            const response = await fetch(`/agent/history/${patientId}`);
+            const data = await response.json();
+            
+            loader.style.display = 'none';
+            content.style.display = 'block';
+
+            if (data.success && data.history.length > 0) {
+                currentHistory = data.history;
+                renderHistoryList();
+            } else if (data.success) {
+                modalBody.innerHTML = '<p style="text-align: center; color: var(--md-sys-color-outline);">Nenhum relatório foi gerado para este paciente ainda.</p>';
+            } else {
+                modalBody.innerHTML = `<p style="color: var(--md-sys-color-error);">${data.message}</p>`;
+            }
+        } catch (e) {
+            loader.style.display = 'none';
+            content.style.display = 'block';
+            modalBody.innerHTML = '<p>Erro de conexão ao buscar histórico.</p>';
+        }
+    }
+
+    function renderHistoryList() {
+        modalTitle.innerText = `Histórico: ${currentPatientName}`;
+        let html = '<div class="history-list" style="display: flex; flex-direction: column; gap: 12px;">';
+        currentHistory.forEach((report, index) => {
+            html += `
+                <div class="md-card elevated" 
+                     style="padding: 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;"
+                     onclick="viewSpecificReport(${index})"
+                     onmouseover="this.style.backgroundColor='var(--md-sys-color-surface-variant)'"
+                     onmouseout="this.style.backgroundColor='var(--md-sys-color-surface)'">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-outlined" style="color: var(--md-sys-color-primary);">calendar_today</span>
+                        <span style="font-weight: 500; font-size: 16px;">${report.date}</span>
+                    </div>
+                    <span class="material-icons-outlined" style="color: var(--md-sys-color-outline);">chevron_right</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        modalBody.innerHTML = html;
+    }
+
+    function viewSpecificReport(index) {
+        const report = currentHistory[index];
+        modalTitle.innerText = `Relatório: ${report.date}`;
+        modalBody.innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <button class="md-button outlined" onclick="renderHistoryList()">
+                    <span class="material-icons-outlined">arrow_back</span>
+                    Voltar para Lista
+                </button>
+            </div>
+            <div class="report-markdown">${marked.parse(report.content)}</div>
+        `;
+    }
+</script>
+{% endblock %}

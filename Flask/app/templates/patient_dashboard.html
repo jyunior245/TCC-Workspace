@@ -41,9 +41,17 @@
   <div class="main-content">
     <header class="app-bar" role="banner" aria-label="Barra de aplicativo">
       <div class="app-bar__title">Dashboard do Paciente</div>
-      <div class="user-profile">
-        <span class="user-name">Paciente</span>
-        <div class="user-avatar">P</div>
+      <div class="user-profile" style="display: flex; align-items: center; gap: 16px;">
+        {% if patient_code %}
+        <div class="patient-code-badge" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 4px 12px; border-radius: 16px; font-weight: bold; font-family: monospace; font-size: 14px; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;" title="Seu código de paciente para o ACS">
+          <span class="material-icons-outlined" style="font-size: 16px;">qr_code_2</span>
+          {{ patient_code }}
+        </div>
+        {% endif %}
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="user-name">Paciente</span>
+          <div class="user-avatar">P</div>
+        </div>
       </div>
     </header>
 
