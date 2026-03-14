@@ -1,8 +1,11 @@
 import os
 import requests
 import json
+from datetime import date, datetime
 from app.services.rag_service import rag_service
 from app.models.chat_history import ChatHistory
+from app.models.daily_report import DailyReport
+from app.models.patient import Patient
 from app.extensions.sql_alchemy import db
 
 class HealthAgent:
@@ -57,6 +60,66 @@ class HealthAgent:
             db.session.commit()
             
         return response
+
+    def generate_daily_report(self, patient_id, target_date=None):
+        """Gera um relatório diário das interações do paciente para o ACS visualizar"""
+        if not target_date:
+            target_date = date.today()
+
+        # Busca histórico do dia específico
+        start_of_day = datetime.combine(target_date, datetime.min.time())
+        end_of_day = datetime.combine(target_date, datetime.max.time())
+        
+        chats_today = ChatHistory.query.filter(
+            ChatHistory.user_id == patient_id,
+            ChatHistory.timestamp >= start_of_day,
+            ChatHistory.timestamp <= end_of_day
+        ).order_by(ChatHistory.timestamp.asc()).all()
+
+        if not chats_today:
+            return None, "O paciente não teve interações com a IA neste dia."
+
+        # Transcreve a conversa
+        conversation_transcript = "\n".join([
+            f"[{c.timestamp.strftime('%H:%M')}] Paciente ({c.intent}): {c.message}\nIA: {c.response}\n" 
+            for c in chats_today
+        ])
+
+        # Prompt para sumarização clínica
+        summary_prompt = f"""
+Você é um sistema de sumarização clínica projetado para ajudar Agentes Comunitários de Saúde (ACS).
+Analise o seguinte histórico de chat de um paciente hoje e crie um Relatório Diário conciso e estruturado.
+
+Diretrizes para o Relatório:
+1. FOCO NA SAÚDE: Destaque quaisquer sintomas relatados, dores, medicamentos mencionados ou queixas.
+2. SINAIS DE ALERTA: Se houver indícios de gravidade (emergências, dores agudas, confusão), inicie o relatório com um [ALERTA] bem claro.
+3. CONTEXTO SOCIAL: Mencione brevemente o estado emocional ou necessidades sociais, se o paciente relatou.
+4. FORMATO: Use Markdown (bullet points, **negrito** para termos chave) para facilitar a leitura rápida do ACS.
+
+Histórico das Conversas de Hoje:
+{conversation_transcript}
+
+Gere o Relatório Diário de Saúde agora:
+"""
+        
+        report_content = self._call_llama(summary_prompt)
+
+        # Salva ou atualiza no banco
+        try:
+            existing_report = DailyReport.query.filter_by(patient_id=patient_id, date=target_date).first()
+            if existing_report:
+                existing_report.content = report_content
+                existing_report.updated_at = datetime.utcnow()
+            else:
+                new_report = DailyReport(patient_id=patient_id, date=target_date, content=report_content)
+                db.session.add(new_report)
+            
+            db.session.commit()
+            return report_content, "Relatório gerado com sucesso."
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao salvar relatório diário: {str(e)}")
+            return report_content, f"Relatório gerado, mas erro ao salvar no banco: {str(e)}"
 
     def _classify_intent(self, message):
         """Usa o Llama para classificar o que o idoso quer"""

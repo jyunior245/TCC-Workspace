@@ -37,9 +37,15 @@ def create_app():
         
         # --- INICIALIZAÇÃO DO RAG ---
         from app.services.rag_service import rag_service
-        print("🚀 Inicializando banco de dados vetorial...")
-        rag_service.load_pdf_protocols()
-    
+        import threading
+        print("🚀 Inicializando banco de dados vetorial em background...")
+        
+        def init_rag_bg():
+            with app.app_context():
+                rag_service.load_pdf_protocols()
+                
+        threading.Thread(target=init_rag_bg, daemon=True).start()
+
 
     app.register_blueprint(index_bp)
     app.register_blueprint(login_bp)

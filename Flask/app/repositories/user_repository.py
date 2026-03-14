@@ -37,9 +37,20 @@ class UserRepository:
         return None
 
     @staticmethod
+    def _generate_patient_code(length=6):
+        import random
+        import string
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+            # Check if code already exists to ensure uniqueness
+            if not Patient.query.filter_by(patient_code=code).first():
+                return code
+
+    @staticmethod
     def create_patient_profile(user_id, data):
         try:
-            profile = Patient(id=user_id, **data)
+            patient_code = UserRepository._generate_patient_code()
+            profile = Patient(id=user_id, patient_code=patient_code, **data)
             db.session.add(profile)
             # Também ativa o usuário
             user = User.query.get(user_id)
@@ -65,3 +76,27 @@ class UserRepository:
         except Exception as e:
             db.session.rollback()
             raise Exception(f"Database Error (Agent Profile): {str(e)}")
+
+    @staticmethod
+    def link_patient_to_agent(agent_id, patient_code):
+        try:
+            patient = Patient.query.filter_by(patient_code=patient_code.upper()).first()
+            if not patient:
+                return False, "Código de paciente inválido ou não encontrado."
+            
+            if patient.agent_id:
+                if patient.agent_id == agent_id:
+                     return False, "Paciente já está vinculado a você."
+                return False, "Paciente já está vinculado a outro ACS."
+                
+            patient.agent_id = agent_id
+            db.session.commit()
+            return True, "Paciente vinculado com sucesso."
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Erro ao vincular paciente: {str(e)}"
+
+    @staticmethod
+    def get_linked_patients(agent_id):
+        # Retorna lista de perfis de pacientes vinculados a esse ACS
+        return Patient.query.filter_by(agent_id=agent_id).all()

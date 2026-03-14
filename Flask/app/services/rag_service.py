@@ -19,14 +19,23 @@ class RAGService:
         )
         self.collection = self.client.get_or_create_collection(name="sus_protocols")
         
-        try:
-            print("⌛ Carregando modelo de embeddings...")
-            self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-            self.offline_mode = False
-        except Exception as e:
-            print(f"⚠️ Erro ao carregar modelo: {e}")
-            self.offline_mode = True
-            self.model = None
+        self._model = None
+        self.offline_mode = False
+        self._model_loading = False
+
+    @property
+    def model(self):
+        if self._model is None and not self.offline_mode:
+            try:
+                print("⌛ Carregando modelo de embeddings na primeira requisição...", flush=True)
+                self.offline_mode = False
+                from sentence_transformers import SentenceTransformer
+                self._model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            except Exception as e:
+                print(f"⚠️ Erro ao carregar modelo: {e}")
+                self.offline_mode = True
+                self._model = None
+        return self._model
 
     def load_pdf_protocols(self):
         """Lê todos os PDFs na pasta de protocolos e os adiciona ao banco"""
