@@ -2,8 +2,15 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Instala o netcat para o script de wait-for-db
-RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+# Instala o netcat para o script de wait-for-db e dependencias do WeasyPrint para PDF
+RUN apt-get update && apt-get install -y \
+    netcat-openbsd \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libjpeg-dev \
+    libopenjp2-7-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

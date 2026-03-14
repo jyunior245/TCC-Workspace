@@ -277,11 +277,15 @@
         const report = currentHistory[index];
         modalTitle.innerText = `Relatório: ${report.date}`;
         modalBody.innerHTML = `
-            <div style="margin-bottom: 24px;">
+            <div style="margin-bottom: 24px; display: flex; gap: 12px;">
                 <button class="md-button outlined" onclick="renderHistoryList()">
                     <span class="material-icons-outlined">arrow_back</span>
                     Voltar para Lista
                 </button>
+                <a href="/agent/download_report/${report.id}" class="md-button filled" target="_blank" style="text-decoration: none;">
+                    <span class="material-icons-outlined">picture_as_pdf</span>
+                    Baixar PDF
+                </a>
             </div>
             <div class="report-markdown">${marked.parse(report.content)}</div>
         `;

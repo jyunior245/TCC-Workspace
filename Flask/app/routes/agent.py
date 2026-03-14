@@ -89,3 +89,90 @@ def get_history(patient_id):
     ]
     
     return jsonify({"success": True, "history": history_data})
+
+@agent_bp.route('/download_report/<int:report_id>', methods=['GET'])
+def download_report(report_id):
+    if 'user_id' not in session or session.get('user_type') != 'health_agent':
+        return jsonify({"success": False, "message": "Acesso negado"}), 403
+
+    from app.models.daily_report import DailyReport
+    report = DailyReport.query.get_or_404(report_id)
+    
+    # Valida se o paciente pertence a este ACS
+    agent_id = session['user_id']
+    patient = UserRepository.get_user_by_id(report.patient_id)
+    if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
+        return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
+
+    import markdown
+    from flask_weasyprint import HTML, render_pdf
+    
+    # Converte o markdown para HTML
+    html_content = markdown.markdown(report.content)
+    
+    # Template HTML básico para o PDF
+    pdf_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Relatório de Saúde - {report.date.strftime('%d/%m/%Y')}</title>
+        <style>
+            @page {{
+                size: A4;
+                margin: 2cm;
+            }}
+            body {{
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                color: #333;
+                line-height: 1.6;
+            }}
+            .header {{
+                text-align: center;
+                border-bottom: 2px solid #006c4b;
+                padding-bottom: 10px;
+                margin-bottom: 30px;
+            }}
+            .header h1 {{
+                color: #006c4b;
+                margin: 0;
+            }}
+            .header p {{
+                color: #666;
+                margin: 5px 0 0 0;
+            }}
+            .patient-info {{
+                background-color: #f7fbf2;
+                border: 1px solid #dce5dd;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }}
+            .content h1, .content h2, .content h3 {{
+                color: #006c4b;
+                margin-top: 20px;
+            }}
+            .content strong {{
+                color: #006c4b;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Relatório de Saúde Diário</h1>
+            <p><strong>Data:</strong> {report.date.strftime('%d/%m/%Y')}</p>
+        </div>
+        <div class="patient-info">
+            <p><strong>Paciente:</strong> {patient.name}</p>
+            <p><strong>Código SUS/Identificação:</strong> {patient.patient_profile.patient_code}</p>
+        </div>
+        <div class="content">
+            {html_content}
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Gera e retorna o PDF
+    filename = f"Relatorio_Saude_{patient.name.replace(' ', '_')}_{report.date.strftime('%Y%m%d')}.pdf"
+    return render_pdf(HTML(string=pdf_html), download_filename=filename)

@@ -21,3 +21,6 @@ pyttsx3
 pygame
 edge_tts
 SpeechRecognition
+Markdown
+WeasyPrint
+Flask-WeasyPrint
