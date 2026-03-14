@@ -621,3 +621,30 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--md-sys-color-outline);
 }
+
+/* Priority Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.badge-alta {
+  background-color: #ffdad6;
+  color: #ba1a1a;
+}
+.badge-media {
+  background-color: #ffdf99;
+  color: #7b5800;
+}
+.badge-baixa {
+  background-color: #c4eed0;
+  color: #005313;
+}
+.badge-sem-dados {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+}
