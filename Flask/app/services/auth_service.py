@@ -60,3 +60,4 @@ class AuthService:
             print("Rollback: Firebase user deleted successfully.")
         except Exception as e:
             print(f"Failed to rollback Firebase user: {e}")
+

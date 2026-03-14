@@ -139,6 +139,60 @@ Gere o Relatório Diário de Saúde agora:
             if category in intent: return category
         return "OTHER"
 
+    def analyze_patient_triage(self, patient_history_text):
+        """Analisa os relatórios do paciente e retorna JSON de prioridade (ALTA, MÉDIA, BAIXA) com justificativa."""
+        triage_prompt = f"""
+Você é um sistema de Triagem Clínica Inteligente projetado para ajudar Agentes Comunitários de Saúde (ACS).
+Sua tarefa é analisar os relatórios recentes de um paciente e definir o nível de prioridade para visita domiciliar ou atenção primária.
+
+Regras de Classificação:
+- ALTA: Relatos de sintomas graves (dor no peito, falta de ar severa, confusão mental), emergências não solucionadas, risco de vida iminente ou desestabilização grave de doenças crônicas.
+- MÉDIA: Presença de sintomas moderados, dúvidas importantes sobre nova medicação, piora leve de condição crônica, dor moderada persistente.
+- BAIXA: Rotina normal, checagem padrão, sintomas leves resolvidos, sem queixas urgentes recentes.
+
+INSTRUÇÃO OBRIGATÓRIA DE FORMATO:
+Você DEVE retornar APENAS um objeto JSON válido, sem nenhum outro texto antes ou depois, seguindo EXATAMENTE esta estrutura:
+{{
+  "nivel": "ALTA" ou "MÉDIA" ou "BAIXA",
+  "justificativa": "Uma explicação em um parágrafo claro, objetivo e clínico do porquê esse nível de prioridade foi escolhido, mencionando os pontos chave do histórico lido. Indique o aconselhamento ou os riscos."
+}}
+
+Histórico Recente de Relatórios do Paciente:
+{patient_history_text}
+
+JSON gerado:
+"""
+        response_text = self._call_llama(triage_prompt).strip()
+        
+        # Tentativa de extrair o JSON caso o Llama inclua texto em volta (ex: "Aqui está o JSON: ...")
+        try:
+            # Encontra o primeiro { e o último }
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_str = response_text[start_idx:end_idx+1]
+                triage_data = json.loads(json_str)
+                # Garante que as chaves existem
+                if "nivel" not in triage_data or "justificativa" not in triage_data:
+                    raise ValueError("Faltam chaves no JSON da triagem.")
+                    
+                # Padroniza nivel
+                nivel = str(triage_data["nivel"]).upper()
+                if "ALTA" in nivel: nivel = "ALTA"
+                elif "MÉDIA" in nivel or "MEDIA" in nivel: nivel = "MÉDIA"
+                else: nivel = "BAIXA"
+                
+                triage_data["nivel"] = nivel
+                return triage_data
+            else:
+                raise ValueError("Nenhum JSON encontrado na resposta da IA.")
+        except json.JSONDecodeError as e:
+            print(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text}")
+            return {"nivel": "BAIXA", "justificativa": "Erro ao tentar ler o formato devolvido pela Inteligência Artificial. Recomendável ver os relatórios manualmente."}
+        except Exception as e:
+            print(f"[AI TRIAGE ERROR] Erro inesperado: {e}")
+            return {"nivel": "BAIXA", "justificativa": "Erro interno no processamento com a Inteligência Artificial."}
+
     def _build_prompt(self, message, intent, context, history, sources=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
 

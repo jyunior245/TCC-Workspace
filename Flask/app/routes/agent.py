@@ -72,6 +72,57 @@ def generate_report(patient_id):
     else:
         return jsonify({"success": False, "message": status_message})
 
+@agent_bp.route('/triage', methods=['GET'])
+def triage():
+    if 'user_id' not in session or session.get('user_type') != 'health_agent':
+        return jsonify({"success": False, "message": "Acesso negado"}), 403
+
+    agent_id = session['user_id']
+    linked_patients = UserRepository.get_linked_patients(agent_id)
+    
+    from app.models.daily_report import DailyReport
+    
+    triage_results = []
+    
+    for patient in linked_patients:
+        # Busca os 5 ultimos relatórios
+        reports = DailyReport.query.filter_by(patient_id=patient.id).order_by(DailyReport.date.desc()).limit(5).all()
+        
+        if not reports:
+            triage_results.append({
+                "patient_id": patient.id,
+                "name": patient.user.name,
+                "nivel": "SEM DADOS",
+                "justificativa": "Paciente não possui relatórios gerados recentemente para análise de triagem.",
+                "weight": 0
+            })
+            continue
+            
+        # Concatena o conteudo dos relatórios
+        history_text = "\n\n".join([f"Data: {r.date}\n{r.content}" for r in reports])
+        
+        # Analisa a triagem
+        triage_data = ai_svc.analyze_patient_triage(history_text)
+        nivel = triage_data.get("nivel", "BAIXA")
+        
+        weight = 1
+        if nivel == "ALTA": weight = 3
+        elif nivel == "MÉDIA" or nivel == "MEDIA": weight = 2
+        else: weight = 1
+        
+        triage_results.append({
+            "patient_id": patient.id,
+            "name": patient.user.name,
+            "nivel": nivel,
+            "justificativa": triage_data.get("justificativa", "Sem justificativa detalhada."),
+            "weight": weight
+        })
+        
+    # Ordena: Maior peso (ALTA) primeiro, seguido de MÉDIA, BAIXA, SEM DADOS
+    triage_results.sort(key=lambda x: x["weight"], reverse=True)
+    
+    return jsonify({"success": True, "triage_list": triage_results})
+
 @agent_bp.route('/history/<patient_id>', methods=['GET'])
 def get_history(patient_id):
     if 'user_id' not in session or session.get('user_type') != 'health_agent':

@@ -49,9 +49,17 @@ class UserRepository:
     @staticmethod
     def create_patient_profile(user_id, data):
         try:
-            patient_code = UserRepository._generate_patient_code()
-            profile = Patient(id=user_id, patient_code=patient_code, **data)
-            db.session.add(profile)
+            profile = Patient.query.get(user_id)
+            if profile:
+                # Update existing profile
+                for key, value in data.items():
+                    setattr(profile, key, value)
+            else:
+                # Create new profile
+                patient_code = UserRepository._generate_patient_code()
+                profile = Patient(id=user_id, patient_code=patient_code, **data)
+                db.session.add(profile)
+            
             # Também ativa o usuário
             user = User.query.get(user_id)
             if user:
@@ -100,3 +108,4 @@ class UserRepository:
     def get_linked_patients(agent_id):
         # Retorna lista de perfis de pacientes vinculados a esse ACS
         return Patient.query.filter_by(agent_id=agent_id).all()
+

@@ -10,6 +10,12 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libopenjp2-7-dev \
     libffi-dev \
+    libcairo2 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
+    libglib2.0-0 \
+    libharfbuzz0b \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

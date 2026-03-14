@@ -97,14 +97,89 @@ def complete_registration():
     if request.method == 'POST':
         try:
             if user_type == 'patient':
+                # Função auxiliar para processar listas como strings separadas por vírgula
+                def get_csv_list(field_name):
+                    items = request.form.getlist(field_name)
+                    return ",".join(items) if items else None
+                
+                def get_int(field_name):
+                    val = request.form.get(field_name)
+                    return int(val) if val and val.isdigit() else None
+
+                # Captura campos simples e limpa string vazia para nulo
                 data = {
-                    'education_level': request.form.get('education_level'),
-                    'income': request.form.get('income'),
-                    'housing_conditions': request.form.get('housing_conditions'),
-                    'sanitation_access': request.form.get('sanitation_access') == 'on',
-                    'work_status': request.form.get('work_status'),
-                    'family_context': request.form.get('family_context')
+                    # Identificação Básica
+                    'date_of_birth': request.form.get('date_of_birth') or None,
+                    'gender': request.form.get('gender') or None,
+                    'cpf': request.form.get('cpf') or None,
+                    'rg': request.form.get('rg') or None,
+                    'marital_status': request.form.get('marital_status') or None,
+                    'nationality': request.form.get('nationality') or None,
+                    'education_level': request.form.get('education_level') or None,
+                    'work_status': request.form.get('work_status') or None,
+                    'has_whatsapp': request.form.get('has_whatsapp') == 'yes',
+                    
+                    # Cuidador / Emergência
+                    'caregiver_name': request.form.get('caregiver_name') or None,
+                    'caregiver_phone': request.form.get('caregiver_phone') or None,
+                    
+                    # Endereço e Moradia
+                    'cep': request.form.get('cep') or None,
+                    'street': request.form.get('street') or None,
+                    'number': request.form.get('number') or None,
+                    'neighborhood': request.form.get('neighborhood') or None,
+                    'city': request.form.get('city') or None,
+                    'state': request.form.get('state') or None,
+                    'reference_point': request.form.get('reference_point') or None,
+                    'zone': request.form.get('zone') or None,
+                    'housing_type': request.form.get('housing_type') or None,
+                    'housing_status': request.form.get('housing_status') or None,
+                    'num_residents': get_int('num_residents'),
+                    'has_potable_water': request.form.get('has_potable_water') == 'yes',
+                    'has_sanitation': request.form.get('has_sanitation') == 'yes',
+                    'has_garbage_collection': request.form.get('has_garbage_collection') == 'yes',
+                    'has_electricity': request.form.get('has_electricity') == 'yes',
+                    'has_internet': request.form.get('has_internet') == 'yes',
+                    
+                    # Socioeconômico
+                    'income': request.form.get('income') or None,
+                    'income_source': request.form.get('income_source') or None,
+                    'social_benefits': get_csv_list('social_benefits'),
+                    'food_insecurity': request.form.get('food_insecurity') or None,
+                    'financially_dependent': request.form.get('financially_dependent') == 'yes',
+                    
+                    # Saúde Geral e Histórico
+                    'chronic_conditions': get_csv_list('chronic_conditions'),
+                    # 'past_surgeries': get_csv_list('past_surgeries'),
+                    # 'recent_hospitalizations': get_csv_list('recent_hospitalizations'),
+                    # 'medication_allergies': get_csv_list('medication_allergies'),
+                    # 'takes_medication': request.form.get('takes_medication') == 'yes',
+                    # 'medication_adherence': request.form.get('medication_adherence') or None,
+                    
+                    # Indicadores Físicos
+                    'weight': request.form.get('weight') or None,
+                    'height': request.form.get('height') or None,
+                    'mobility_status': request.form.get('mobility_status') or None,
+                    'functional_capacity': get_csv_list('functional_capacity'),
+                    
+                    # Saúde Mental e Cognitiva
+                    'perceived_memory': request.form.get('perceived_memory') or None,
+                    'mental_diagnoses': get_csv_list('mental_diagnoses'),
+                    
+                    # Hábitos de Vida
+                    'physical_activity_frequency': request.form.get('physical_activity_frequency') or None,
+                    'sleep_quality': request.form.get('sleep_quality') or None,
+                    'alcohol_consumption': request.form.get('alcohol_consumption') or None,
+                    'smoking': request.form.get('smoking') or None,
+                    'diet_quality': request.form.get('diet_quality') or None,
+                    
+                    # Rede de Apoio
+                    'lives_alone': request.form.get('lives_alone') == 'yes',
+                    'has_close_family': request.form.get('has_close_family') == 'yes',
+                    'frequent_visits': request.form.get('frequent_visits') == 'yes',
+                    'community_activities': request.form.get('community_activities') == 'yes',
                 }
+            
                 UserRepository.create_patient_profile(user_id, data)
                 
             elif user_type == 'health_agent':
@@ -139,6 +214,13 @@ def complete_registration():
     else:
         return redirect(url_for('index.index'))
 
+@login_bp.route('/logout')
+def logout():
+    session.clear()
+    flash("Sessão encerrada.")
+    return redirect(url_for('login.login'))
+
+
 @index_bp.route('/')
 def index():
-    return "Hello, World!"
+    return redirect(url_for('login.login'))

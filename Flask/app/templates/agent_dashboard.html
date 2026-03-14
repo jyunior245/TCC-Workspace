@@ -23,9 +23,9 @@
                 <span class="material-icons-outlined">people</span>
                 <span>Meus Pacientes</span>
             </button>
-            <button class="nav-item" onclick="switchSection('reports-section', this)">
-                <span class="material-icons-outlined">assignment</span>
-                <span>Relatórios Pendentes</span>
+            <button class="nav-item" onclick="switchSection('triage-section', this)">
+                <span class="material-icons-outlined">psychology</span>
+                <span>Triagem Inteligente</span>
             </button>
 
         </nav>
@@ -132,11 +132,32 @@
                 </section>
             </div>
 
-            <!-- Empty Reports Section -->
-            <div id="reports-section" class="dashboard-section" style="display: none;">
+            <!-- Inteligência Triagem Section -->
+            <div id="triage-section" class="dashboard-section" style="display: none;">
                 <section class="section">
-                    <h2 class="title-large">Relatórios Pendentes</h2>
-                    <p class="body-medium">Esta seção está em desenvolvimento.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2 class="title-large" style="margin-bottom: 0;">Triagem Inteligente</h2>
+                        <button class="md-button filled" onclick="generateTriage()">
+                            <span class="material-icons-outlined">auto_awesome</span>
+                            Gerar Triagem
+                        </button>
+                    </div>
+                    <p class="body-medium" style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                        Atendimentos ordenados por prioridade clínica, baseados na análise da IA sobre os relatórios recentes.
+                    </p>
+                    
+                    <div id="triageLoader" style="display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 40px;">
+                        <div class="spinner" style="width: 40px; height: 40px; border: 4px solid var(--md-sys-color-surface-variant); border-top-color: var(--md-sys-color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                        <p class="body-medium">A IA está analisando todos os pacientes...</p>
+                    </div>
+
+                    <div id="triageListContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="md-card" style="text-align: center; padding: 40px; border-style: dashed;">
+                            <span class="material-icons-outlined" style="font-size: 40px; color: var(--md-sys-color-outline); margin-bottom: 16px;">psychology</span>
+                            <p class="body-large">Nenhuma triagem realizada hoje.</p>
+                            <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">Clique em "Gerar Triagem" para classificar seus pacientes.</p>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -149,9 +170,9 @@
                 <span class="material-icons-outlined">people</span>
                 <span>Pacientes</span>
             </button>
-            <button class="nav-item" onclick="switchSection('reports-section', this)">
-                <span class="material-icons-outlined">assignment</span>
-                <span>Relatórios</span>
+            <button class="nav-item" onclick="switchSection('triage-section', this)">
+                <span class="material-icons-outlined">psychology</span>
+                <span>Triagem</span>
             </button>
             <a href="/logout" class="nav-item">
                 <span class="material-icons-outlined">logout</span>
@@ -326,6 +347,84 @@
             </div>
             <div class="report-markdown">${marked.parse(report.content)}</div>
         `;
+    }
+
+    let currentTriageList = [];
+
+    async function generateTriage() {
+        const loader = document.getElementById('triageLoader');
+        const container = document.getElementById('triageListContainer');
+        
+        loader.style.display = 'flex';
+        container.style.display = 'none';
+        
+        try {
+            const response = await fetch('/agent/triage');
+            const data = await response.json();
+            
+            loader.style.display = 'none';
+            container.style.display = 'flex';
+            
+            if (data.success && data.triage_list && data.triage_list.length > 0) {
+                renderTriageList(data.triage_list);
+            } else if (data.success) {
+                container.innerHTML = '<div class="md-card" style="text-align: center; padding: 40px;"><p style="color: var(--md-sys-color-outline);">Nenhum paciente para triar.</p></div>';
+            } else {
+                container.innerHTML = `<p style="color: var(--md-sys-color-error); text-align: center;">${data.message}</p>`;
+            }
+        } catch (e) {
+            loader.style.display = 'none';
+            container.style.display = 'flex';
+            container.innerHTML = '<p style="text-align: center; color: var(--md-sys-color-error);">Erro de conexão ao gerar triagem.</p>';
+        }
+    }
+
+    function renderTriageList(triageList) {
+        let html = '';
+        currentTriageList = triageList;
+        
+        triageList.forEach((t, i) => {
+            let badgeClass = 'badge-sem-dados';
+            if (t.nivel === 'ALTA') badgeClass = 'badge-alta';
+            else if (t.nivel === 'MÉDIA' || t.nivel === 'MEDIA') badgeClass = 'badge-media';
+            else if (t.nivel === 'BAIXA') badgeClass = 'badge-baixa';
+            
+            html += `
+                <div class="md-card elevated" style="padding: 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: background 0.2s;" onclick="showTriageJustification(${i})">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 500;">${t.name}</h3>
+                    </div>
+                    <div>
+                        <span class="badge ${badgeClass}">${t.nivel}</span>
+                    </div>
+                    <span class="material-icons-outlined" style="color: var(--md-sys-color-outline);">chevron_right</span>
+                </div>
+            `;
+        });
+        
+        document.getElementById('triageListContainer').innerHTML = html;
+    }
+
+    function showTriageJustification(index) {
+        const t = currentTriageList[index];
+        modalTitle.innerText = `Triagem: ${t.name} (${t.nivel})`;
+        modalBody.innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: var(--md-sys-color-primary); margin-top: 0; font-size: 18px;">Justificativa Médica:</h3>
+                <p class="body-large">${t.justificativa}</p>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button class="md-button outlined" onclick="closeModal()">
+                    <span class="material-icons-outlined">close</span>
+                    Fechar
+                </button>
+            </div>
+        `;
+        
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        scrim.classList.add('active');
     }
 </script>
 {% endblock %}
