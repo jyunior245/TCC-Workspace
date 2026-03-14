@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     let rec = null;
+    let wakeWordRec = null;
     const isSecureOrigin = location.protocol === 'https:' || location.hostname === 'localhost';
 
     if (SR && isSecureOrigin) {
@@ -103,9 +104,63 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!currentText || currentText === 'Ouvindo...') {
             updateTranscription('');
           }
+          // Resume wake word listening if modal is closed
+          if (!voiceModal.classList.contains('active') && wakeWordRec) {
+            try { wakeWordRec.start(); } catch(e) {}
+          }
         };
       } catch (err) {
         console.warn('Falha ao inicializar SpeechRecognition', err);
+      }
+      
+      // Wake Word Passive Listener
+      try {
+        wakeWordRec = new SR();
+        wakeWordRec.lang = 'pt-BR';
+        wakeWordRec.continuous = true;
+        wakeWordRec.interimResults = true;
+        wakeWordRec.maxAlternatives = 1;
+        
+        wakeWordRec.onresult = (e) => {
+          // Check results for the wake word
+          for (let i = e.resultIndex; i < e.results.length; ++i) {
+            const transcript = e.results[i][0].transcript.toLowerCase();
+            if (transcript.includes('olá agente') || transcript.includes('ola agente') || transcript.includes('olá gente')) {
+                console.log("Wake word detected!");
+                try { wakeWordRec.stop(); } catch(e) {}
+                
+                // Programmatically open the modal and start the active listener
+                voiceModal.classList.add('active');
+                voiceModal.setAttribute('aria-hidden', 'false');
+                updateTranscription('');
+                if (rec) {
+                    try { rec.start(); } catch(err) { console.warn('Falha autostart rec', err); }
+                }
+                break; // Stop processing further interim results once detected
+            }
+          }
+        };
+        
+        wakeWordRec.onerror = (e) => {
+           console.warn('Wake word STT error', e);
+        };
+        
+        wakeWordRec.onend = () => {
+          // Auto restart the passive listener if the active modal is not open
+          if (!voiceModal.classList.contains('active')) {
+            setTimeout(() => {
+                try { wakeWordRec.start(); } catch(e) {}
+            }, 500);
+          }
+        };
+        
+        // Start passive listening initially (might require user interaction first depending on browser)
+        setTimeout(() => {
+            try { wakeWordRec.start(); } catch(e) { console.log('Auto-start wake word need interaction'); }
+        }, 1000);
+
+      } catch (err) {
+         console.warn('Falha ao inicializar Wake Word Listener', err);
       }
     }
 
@@ -182,6 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
       voiceModal.classList.add('active');
       voiceModal.setAttribute('aria-hidden', 'false');
       updateTranscription('');
+      if (wakeWordRec) { try { wakeWordRec.stop(); } catch(e) {} }
+      
       if (rec) {
         const ok = await ensureMicPermission();
         if(!ok){ chatInput.focus(); return; }
@@ -208,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateTranscription('');
       chatInput.value = '';
       if (rec) { try { rec.stop(); } catch(_) {} }
+      if (wakeWordRec) { try { wakeWordRec.start(); } catch(_) {} }
     });
 
     async function handleSend() {
