@@ -19,18 +19,15 @@
         </div>
 
         <nav class="sidebar-nav">
-            <button class="nav-item active">
+            <button class="nav-item active" onclick="switchSection('patients-section', this)">
                 <span class="material-icons-outlined">people</span>
                 <span>Meus Pacientes</span>
             </button>
-            <button class="nav-item">
+            <button class="nav-item" onclick="switchSection('reports-section', this)">
                 <span class="material-icons-outlined">assignment</span>
                 <span>Relatórios Pendentes</span>
             </button>
-            <button class="nav-item">
-                <span class="material-icons-outlined">settings</span>
-                <span>Configurações</span>
-            </button>
+
         </nav>
 
         <div class="sidebar-footer">
@@ -71,67 +68,96 @@
                 {% endif %}
             {% endwith %}
 
-            <!-- Link Patient Section -->
-            <section class="section">
-                <div class="md-card elevated">
-                    <h2 class="card-title">
-                        <span class="material-icons-outlined">person_add</span>
-                        Vincular Novo Paciente
-                    </h2>
-                    <p class="body-medium" style="margin-bottom: 24px; color: var(--md-sys-color-on-surface-variant);">
-                        Insira o código de 6 dígitos que o paciente gerou no aplicativo dele.
-                    </p>
-                    
-                    <form action="{{ url_for('agent.link_patient') }}" method="POST" style="display: flex; gap: 16px; align-items: flex-end;">
-                        <div class="md-text-field" style="max-width: 300px;">
-                            <input type="text" name="patient_code" id="patient_code" placeholder=" " required maxlength="6" style="text-transform: uppercase;">
-                            <label for="patient_code">Código do Paciente</label>
-                        </div>
-                        <button type="submit" class="md-button filled">
-                            <span class="material-icons-outlined">link</span>
-                            Vincular Paciente
-                        </button>
-                    </form>
-                </div>
-            </section>
+            <!-- Patients Section -->
+            <div id="patients-section" class="dashboard-section">
+                <!-- Link Patient Section -->
+                <section class="section">
+                    <div class="md-card elevated">
+                        <h2 class="card-title">
+                            <span class="material-icons-outlined">person_add</span>
+                            Vincular Novo Paciente
+                        </h2>
+                        <p class="body-medium" style="margin-bottom: 24px; color: var(--md-sys-color-on-surface-variant);">
+                            Insira o código de 6 dígitos que o paciente gerou no aplicativo dele.
+                        </p>
+                        
+                        <form action="{{ url_for('agent.link_patient') }}" method="POST" class="link-patient-form">
+                            <div class="md-text-field">
+                                <input type="text" name="patient_code" id="patient_code" placeholder=" " required maxlength="6" style="text-transform: uppercase;">
+                                <label for="patient_code">Código do Paciente</label>
+                            </div>
+                            <button type="submit" class="md-button filled">
+                                <span class="material-icons-outlined">link</span>
+                                Vincular Paciente
+                            </button>
+                        </form>
+                    </div>
+                </section>
 
-            <!-- Patients List Section -->
-            <section class="section">
-                <h2 class="title-large" style="margin-bottom: 16px; font-weight: 400;">Meus Pacientes ({{ patients|length }})</h2>
-                
-                {% if patients %}
-                <div class="patients-grid">
-                    {% for patient in patients %}
-                    <div class="md-card elevated patient-card">
-                        <div class="patient-header">
-                            <div class="patient-initial">{{ patient.user.name[0] }}</div>
-                            <div class="patient-name-info">
-                                <h3>{{ patient.user.name }}</h3>
-                                <p>CÓDIGO: {{ patient.patient_code }}</p>
+                <!-- Patients List Section -->
+                <section class="section">
+                    <h2 class="title-large" style="margin-bottom: 16px; font-weight: 400;">Meus Pacientes ({{ patients|length }})</h2>
+                    
+                    {% if patients %}
+                    <div class="patients-grid">
+                        {% for patient in patients %}
+                        <div class="md-card elevated patient-card">
+                            <div class="patient-header">
+                                <div class="patient-initial">{{ patient.user.name[0] }}</div>
+                                <div class="patient-name-info">
+                                    <h3>{{ patient.user.name }}</h3>
+                                    <p>CÓDIGO: {{ patient.patient_code }}</p>
+                                </div>
+                            </div>
+                            <div class="patient-actions">
+                                <button class="md-button tonal" onclick="showReports('{{ patient.id }}', '{{ patient.user.name }}')">
+                                    <span class="material-icons-outlined">history</span>
+                                    Histórico
+                                </button>
+                                <button class="md-button filled" onclick="generateNow('{{ patient.id }}', '{{ patient.user.name }}')">
+                                    <span class="material-icons-outlined">auto_awesome</span>
+                                    Resumo IA
+                                </button>
                             </div>
                         </div>
-                        <div class="patient-actions">
-                            <button class="md-button tonal" onclick="showReports('{{ patient.id }}', '{{ patient.user.name }}')">
-                                <span class="material-icons-outlined">history</span>
-                                Histórico
-                            </button>
-                            <button class="md-button filled" onclick="generateNow('{{ patient.id }}', '{{ patient.user.name }}')">
-                                <span class="material-icons-outlined">auto_awesome</span>
-                                Resumo IA
-                            </button>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="md-card" style="text-align: center; padding: 64px; border-style: dashed;">
-                    <span class="material-icons-outlined" style="font-size: 48px; color: var(--md-sys-color-outline); margin-bottom: 16px;">people_outline</span>
-                    <p class="body-large">Nenhum paciente vinculado ainda.</p>
-                    <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">Use o formulário acima para adicionar seu primeiro paciente.</p>
-                </div>
-                {% endif %}
-            </section>
+                    {% else %}
+                    <div class="md-card" style="text-align: center; padding: 64px; border-style: dashed;">
+                        <span class="material-icons-outlined" style="font-size: 48px; color: var(--md-sys-color-outline); margin-bottom: 16px;">people_outline</span>
+                        <p class="body-large">Nenhum paciente vinculado ainda.</p>
+                        <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">Use o formulário acima para adicionar seu primeiro paciente.</p>
+                    </div>
+                    {% endif %}
+                </section>
+            </div>
+
+            <!-- Empty Reports Section -->
+            <div id="reports-section" class="dashboard-section" style="display: none;">
+                <section class="section">
+                    <h2 class="title-large">Relatórios Pendentes</h2>
+                    <p class="body-medium">Esta seção está em desenvolvimento.</p>
+                </section>
+            </div>
+
+
         </div>
+
+        <!-- Bottom Navigation for Mobile -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchSection('patients-section', this)">
+                <span class="material-icons-outlined">people</span>
+                <span>Pacientes</span>
+            </button>
+            <button class="nav-item" onclick="switchSection('reports-section', this)">
+                <span class="material-icons-outlined">assignment</span>
+                <span>Relatórios</span>
+            </button>
+            <a href="/logout" class="nav-item">
+                <span class="material-icons-outlined">logout</span>
+                <span>Sair</span>
+            </a>
+        </nav>
     </main>
 </div>
 
@@ -163,6 +189,17 @@
 </style>
 
 <script>
+    function switchSection(sectionId, btn) {
+        // Esconde todas as seções
+        document.querySelectorAll('.dashboard-section').forEach(s => s.style.display = 'none');
+        // Mostra a selecionada
+        document.getElementById(sectionId).style.display = 'block';
+        
+        // Atualiza botões da sidebar
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
     const scrim = document.getElementById('reportModalScrim');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalMarkdownBody');

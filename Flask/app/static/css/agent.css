@@ -67,6 +67,139 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Floating Action Button */
+.fab-add {
+  position: fixed;
+  right: 40px;
+  bottom: 40px;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: #1c1b1f;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transition: var(--transition);
+}
+
+.fab-add:hover { transform: translateY(-5px); background: #000; }
+
+/* Link Patient Form */
+.link-patient-form {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+.link-patient-form .md-text-field {
+  max-width: 300px;
+}
+
+/* Responsive Adjustments */
+.bottom-nav {
+  display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 992px) {
+  .dashboard-container {
+      flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+  
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--md-sys-color-surface);
+    padding: 10px 0;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+    justify-content: space-around;
+    z-index: 1000;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
+  
+  .bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+    gap: 4px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    width: auto;
+  }
+  
+  .bottom-nav .nav-item.active { 
+    color: var(--md-sys-color-on-primary-container); 
+    background-color: var(--md-sys-color-secondary-container);
+    font-weight: 700; 
+  }
+  
+  .main-content {
+    margin-bottom: 70px;
+  }
+  
+  .app-bar { 
+    padding: 16px; 
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .user-profile {
+      align-self: flex-end;
+  }
+
+  .sections-container { 
+    padding: 0 16px 16px; 
+  }
+  
+  .patients-grid { 
+    grid-template-columns: 1fr; 
+  }
+
+  /* Make form vertical on mobile */
+  .link-patient-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .link-patient-form .md-text-field,
+  .link-patient-form .md-button {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Adjust Modal for Mobile */
+  .modal-container {
+    width: 95%;
+    height: 90vh;
+    border-radius: 20px;
+  }
+
+  .modal-header {
+      padding: 16px 20px;
+  }
+
+  .modal-header h2 {
+      font-size: 20px;
+  }
+
+  .modal-content {
+      padding: 20px;
+  }
+}
 .sidebar-nav {
   display: flex;
   flex-direction: column;
