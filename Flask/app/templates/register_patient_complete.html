@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/voice_nav.css') }}">
 <style>
     /* Core Layout Classes - RESTORED */
     .hidden-input { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -790,5 +791,6 @@
             });
         });
     </script>
+    <script src="{{ url_for('static', filename='js/voice_nav.js') }}"></script>
 </div>
 {% endblock %}

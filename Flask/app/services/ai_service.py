@@ -193,6 +193,7 @@ JSON gerado:
             print(f"[AI TRIAGE ERROR] Erro inesperado: {e}")
             return {"nivel": "BAIXA", "justificativa": "Erro interno no processamento com a Inteligência Artificial."}
 
+    
     def _build_prompt(self, message, intent, context, history, sources=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
 
