@@ -252,3 +252,46 @@ body {
 .req-chip i {
   font-size: 12px;
 }
+
+/* Accessibility Toggle */
+.accessibility-toggle {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    z-index: 1000;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--md-sys-elevation-2);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+}
+
+.accessibility-toggle:hover {
+    box-shadow: var(--md-sys-elevation-3, 0px 4px 8px rgba(0,0,0,0.3));
+    background-color: var(--md-sys-color-primary-container);
+}
+
+.accessibility-toggle.active {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.accessibility-toggle .material-icons-outlined {
+    font-size: 24px;
+}
+
+@media (max-width: 600px) {
+    .accessibility-toggle {
+        bottom: 100px; /* Above mobile bottom nav if present */
+        right: 16px;
+        width: 48px;
+        height: 48px;
+    }
+}

@@ -30,6 +30,12 @@
 
     {% block content %}{% endblock %}
 
+    <!-- Accessibility Toggle -->
+    <button class="accessibility-toggle" id="accessibilityToggle" onclick="AccessibilityService.toggle()" aria-label="Ativar leitura de tela guiada" title="Ativar leitura de tela">
+        <span class="material-icons-outlined">volume_off</span>
+    </button>
+
+    <script src="{{ url_for('static', filename='js/accessibility.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

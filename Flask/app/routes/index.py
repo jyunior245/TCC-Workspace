@@ -1,5 +1,4 @@
-
-from flask import Blueprint, flash, request, session, redirect, url_for, render_template
+from flask import Blueprint, flash, request, session, redirect, url_for, render_template, jsonify
 from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
 
@@ -224,3 +223,4 @@ def logout():
 @index_bp.route('/')
 def index():
     return redirect(url_for('login.login'))
+

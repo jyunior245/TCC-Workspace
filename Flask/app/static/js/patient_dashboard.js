@@ -116,21 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // Wake Word Passive Listener
       try {
         wakeWordRec = new SR();
-        wakeWordRec.lang = 'pt-BR';
-        wakeWordRec.continuous = true;
-        wakeWordRec.interimResults = true;
-        wakeWordRec.maxAlternatives = 1;
-        
+        // ... (intermediate lines)
         wakeWordRec.onresult = (e) => {
-          // Check results for the wake word
           for (let i = e.resultIndex; i < e.results.length; ++i) {
             const transcript = e.results[i][0].transcript.toLowerCase();
             if (transcript.includes('olá agente') || transcript.includes('ola agente') || transcript.includes('olá gente')) {
                 console.log("Wake word detected!");
                 try { wakeWordRec.stop(); } catch(e) {}
                 
+                // Pause accessibility reader
+                if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
+
                 // Programmatically open the modal and start the active listener
                 voiceModal.classList.add('active');
+                // ...
                 voiceModal.setAttribute('aria-hidden', 'false');
                 updateTranscription('');
                 if (rec) {
@@ -181,6 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function callAgent(message) {
       const msg = (message || '').trim();
       if (!msg) return;
+      
+      // Pause accessibility reader while AI is responding/speaking
+      if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
+
       updateTranscription('Processando sua dúvida...');
       chatInput.disabled = true;
       sendBtn.disabled = true;
@@ -193,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.status === 401) {
           updateTranscription('Sua sessão expirou ou você não está logado. Por favor, faça login novamente para conversar.');
+          if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
           return;
         }
 
@@ -205,6 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (siriWave) { siriWave.classList.remove('idle'); siriWave.classList.add('active'); }
             audio.onended = () => {
               if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
+              // Unpause when AI finishes speaking
+              if (window.AccessibilityService && !voiceModal.classList.contains('active')) {
+                  window.AccessibilityService.setPaused(false);
+              }
               if (voiceModal.classList.contains('active') && rec) {
                 try { rec.start(); } catch(e) {}
               }
@@ -212,19 +220,23 @@ document.addEventListener('DOMContentLoaded', () => {
             audio.play().catch(e => {
               if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
               console.error("Erro ao reproduzir áudio:", e);
+              if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
               if (voiceModal.classList.contains('active') && rec) {
                 try { rec.start(); } catch(err) {}
               }
             });
           } else {
+            if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
             if (voiceModal.classList.contains('active') && rec) {
               try { rec.start(); } catch(err) {}
             }
           }
         } else {
+          if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
           updateTranscription('Desculpe, tive um problema para responder. Tente novamente.');
         }
       } catch (error) {
+        if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
         updateTranscription('Erro de conexão. Verifique se o servidor está rodando.');
       } finally {
         chatInput.disabled = false;
@@ -234,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fabMic.addEventListener('click', async () => {
+      // Pause accessibility reader
+      if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
+
       voiceModal.classList.add('active');
       voiceModal.setAttribute('aria-hidden', 'false');
       updateTranscription('');
@@ -260,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     closeModal.addEventListener('click', () => {
+      // Unpause accessibility reader
+      if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
+
       voiceModal.classList.remove('active');
       voiceModal.setAttribute('aria-hidden', 'true');
       updateTranscription('');
