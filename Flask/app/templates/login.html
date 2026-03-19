@@ -5,6 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/voice_nav.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -51,6 +52,13 @@
             <button type="submit" class="md-button filled">
                 Entrar
             </button>
+
+            <div class="auth-divider">ou</div>
+
+            <a href="{{ url_for('auth_google.login') }}" class="md-button google-btn">
+                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google" class="google-icon">
+                Entrar com Google
+            </a>
         </form>
 
         <div class="auth-footer">

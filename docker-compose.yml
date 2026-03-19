@@ -6,6 +6,8 @@ services:
       - "5000:5000"
     volumes:
       - ./Flask:/app
+      - ./oauth-client-key.json:/app/oauth-client-key.json
+      - ./firebase-key.json:/app/firebase-key.json
       - chroma_data:/app/app/data/vector_db
     env_file:
       - .env

@@ -25,3 +25,4 @@ Markdown
 WeasyPrint
 Flask-WeasyPrint
 firebase-admin
+authLib

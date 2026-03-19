@@ -32,8 +32,8 @@ const VoiceNavigation = (() => {
 
         recognition.onstart = () => {
             isListening = true;
-            fabBtn.classList.add('listening');
-            fabIcon.textContent = 'mic';
+            if (fabBtn) fabBtn.classList.add('listening');
+            if (fabIcon) fabIcon.textContent = 'mic';
             showToast("Estou ouvindo...");
         };
 
@@ -49,8 +49,8 @@ const VoiceNavigation = (() => {
 
         recognition.onend = () => {
             isListening = false;
-            fabBtn.classList.remove('listening');
-            fabIcon.textContent = 'mic_none';
+            if (fabBtn) fabBtn.classList.remove('listening');
+            if (fabIcon) fabIcon.textContent = 'mic_none';
             // Unpause accessibility reader
             if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
         };
@@ -59,13 +59,13 @@ const VoiceNavigation = (() => {
             console.error("Speech Recognition Error:", event.error);
             showToast(`Erro na voz: ${event.error}`);
             isListening = false;
-            fabBtn.classList.remove('listening');
-            fabIcon.textContent = 'mic_none';
+            if (fabBtn) fabBtn.classList.remove('listening');
+            if (fabIcon) fabIcon.textContent = 'mic_none';
             // Unpause accessibility reader
             if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
         };
 
-        fabBtn.addEventListener('click', toggleListening);
+        if (fabBtn) fabBtn.addEventListener('click', toggleListening);
     }
 
     function createUI() {
@@ -100,6 +100,7 @@ const VoiceNavigation = (() => {
     }
 
     function showToast(message, duration = 4000) {
+        if (!toastEl) return;
         toastEl.textContent = message;
         toastEl.classList.add('show');
         setTimeout(() => {
@@ -123,6 +124,7 @@ const VoiceNavigation = (() => {
         utterance.lang = 'pt-BR';
         utterance.rate = 1.3;
         utterance.pitch = 1.0; 
+        
         synth.speak(utterance);
     }
 
@@ -160,7 +162,7 @@ const VoiceNavigation = (() => {
     }
 
     async function processSpeechWithBackend(text) {
-        fabIcon.textContent = 'hourglass_empty'; // Loading state
+        if (fabIcon) fabIcon.textContent = 'hourglass_empty'; // Loading state
         
         try {
             const pageData = extractPageContext();
@@ -178,8 +180,6 @@ const VoiceNavigation = (() => {
             if (!response.ok) throw new Error("HTTP error " + response.status);
             
             const data = await response.json();
-            
-            // Expected JSON: { fields: { "input_id": "value" }, ai_reply: "text", trigger_submit: boolean, trigger_next: boolean }
             
             if (data.fields) {
                 fillFields(data.fields);
@@ -212,7 +212,7 @@ const VoiceNavigation = (() => {
             console.error("Backend voice process error:", error);
             showToast("Erro ao processar comando com a IA.");
         } finally {
-            if (!isListening) fabIcon.textContent = 'mic_none';
+            if (!isListening && fabIcon) fabIcon.textContent = 'mic_none';
         }
     }
 

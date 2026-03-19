@@ -16,3 +16,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+firebase-key.json   
+oauth-client-key.json   
