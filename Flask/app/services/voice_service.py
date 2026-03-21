@@ -7,8 +7,8 @@ import tempfile
 
 class VoiceService:
     def __init__(self, init_pygame=True):
-        # Voz natural em português do Brasil (Masculina)
-        self.voice = "pt-BR-AntonioNeural"
+        # Voz natural em português do Brasil (Feminina)
+        self.voice = "pt-BR-FranciscaNeural"
         self.recognizer = sr.Recognizer()
         self.recognizer.pause_threshold = 1.2
         if init_pygame:

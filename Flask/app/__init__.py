@@ -48,5 +48,8 @@ def create_app():
     app.register_blueprint(agent_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(auth_google_bp)
+    
+    from app.routes.registration_api import registration_api_bp
+    app.register_blueprint(registration_api_bp)
 
     return app
