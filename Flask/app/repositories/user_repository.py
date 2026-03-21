@@ -48,6 +48,7 @@ class UserRepository:
 
     @staticmethod
     def create_patient_profile(user_id, data):
+        from sqlalchemy.exc import IntegrityError
         try:
             profile = Patient.query.get(user_id)
             if profile:
@@ -66,6 +67,12 @@ class UserRepository:
                 user.is_active = True
             db.session.commit()
             return profile
+        except IntegrityError as e:
+            db.session.rollback()
+            error_msg = str(e).lower()
+            if "patients_cpf_key" in error_msg or "cpf" in error_msg:
+                raise Exception("Este CPF já está cadastrado no sistema.")
+            raise Exception(f"Erro de integridade de dados: {str(e)}")
         except Exception as e:
             db.session.rollback()
             raise Exception(f"Database Error (Patient Profile): {str(e)}")

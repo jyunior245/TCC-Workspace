@@ -56,44 +56,45 @@ def register():
         user_type = request.form["user_type"]
 
         try:
-            # 1. Cria o usuário no Firebase Authentication
-            user = AuthService.create_firebase_user(email, password)
-            user_id = user['localId']
-            
-            # 2. Cria o usuário no banco de dados local (pendente de ativação)
-            try:
-                UserRepository.create_user(user_id, name, username, email, user_type)
-                
-                # Auto-login para o usuário recém-criado
-                session['user_id'] = user_id
-                session['user_type'] = user_type
-                session['user_name'] = name
-                
-                flash("Conta criada! Por favor, complete seu cadastro.")
-                return redirect(url_for('register.complete_registration'))
-                
-            except Exception as db_error:
-                # Rollback Firebase
-                if 'idToken' in user:
-                    AuthService.delete_firebase_user(user['idToken'])
-                print(f"Database error: {db_error}")
-                flash("Falha no registro (Erro de Banco de Dados). Tente novamente.")
+            # Verifica localmente se já existe antes de prosseguir
+            from app.models.user import User
+            if User.query.filter_by(email=email).first():
+                flash("Este e-mail já está em uso. Faça login ou tente outro.")
+                return render_template('register.html')
+            if User.query.filter_by(username=username).first():
+                flash("Nome de usuário indisponível. Escolha outro.")
+                return render_template('register.html')
+
+            # GUARDA NA SESSÃO PARA NÃO AUTENTICAR ANTES DE TERMINAR O PERFIL (Conforme pedido pelo usuário)
+            session['temp_reg'] = {
+                'name': name,
+                'username': username,
+                'email': email,
+                'password': password,
+                'user_type': user_type
+            }
+
+            flash("Certo! Agora complete seus dados para finalizar a criação da conta.")
+            return redirect(url_for('register.complete_registration'))
 
         except Exception as e:
-            flash(f"Falha no registro: {str(e)}")
+            flash(f"Falha no registro inicial: {str(e)}")
             print(f"Registration error: {e}")
 
     return render_template('register.html')
 
 @register_bp.route('/register/complete', methods=['GET', 'POST'])
 def complete_registration():
-    if 'user_id' not in session:
+    if 'user_id' not in session and 'temp_reg' not in session:
         return redirect(url_for('login.login'))
     
-    user_type = session.get('user_type')
-    user_id = session.get('user_id')
+    user_type = session['temp_reg']['user_type'] if 'temp_reg' in session else session.get('user_type')
 
     if request.method == 'POST':
+        created_fb = False
+        firebase_user = None
+        user_id = session.get('user_id')
+        
         try:
             if user_type == 'patient':
                 # Função auxiliar para processar listas como strings separadas por vírgula
@@ -107,32 +108,24 @@ def complete_registration():
 
                 # Captura campos simples e limpa string vazia para nulo
                 data = {
-                    # Identificação Básica
                     'date_of_birth': request.form.get('date_of_birth') or None,
                     'gender': request.form.get('gender') or None,
                     'cpf': request.form.get('cpf') or None,
-                    'rg': request.form.get('rg') or None,
                     'marital_status': request.form.get('marital_status') or None,
                     'nationality': request.form.get('nationality') or None,
                     'education_level': request.form.get('education_level') or None,
-                    'work_status': request.form.get('work_status') or None,
-                    'has_whatsapp': request.form.get('has_whatsapp') == 'yes',
                     
-                    # Cuidador / Emergência
                     'caregiver_name': request.form.get('caregiver_name') or None,
                     'caregiver_phone': request.form.get('caregiver_phone') or None,
                     
-                    # Endereço e Moradia
                     'cep': request.form.get('cep') or None,
                     'street': request.form.get('street') or None,
                     'number': request.form.get('number') or None,
                     'neighborhood': request.form.get('neighborhood') or None,
                     'city': request.form.get('city') or None,
                     'state': request.form.get('state') or None,
-                    'reference_point': request.form.get('reference_point') or None,
                     'zone': request.form.get('zone') or None,
-                    'housing_type': request.form.get('housing_type') or None,
-                    'housing_status': request.form.get('housing_status') or None,
+                    
                     'num_residents': get_int('num_residents'),
                     'has_potable_water': request.form.get('has_potable_water') == 'yes',
                     'has_sanitation': request.form.get('has_sanitation') == 'yes',
@@ -140,45 +133,46 @@ def complete_registration():
                     'has_electricity': request.form.get('has_electricity') == 'yes',
                     'has_internet': request.form.get('has_internet') == 'yes',
                     
-                    # Socioeconômico
-                    'income': request.form.get('income') or None,
-                    'income_source': request.form.get('income_source') or None,
-                    'social_benefits': get_csv_list('social_benefits'),
-                    'food_insecurity': request.form.get('food_insecurity') or None,
                     'financially_dependent': request.form.get('financially_dependent') == 'yes',
                     
-                    # Saúde Geral e Histórico
                     'chronic_conditions': get_csv_list('chronic_conditions'),
-                    # 'past_surgeries': get_csv_list('past_surgeries'),
-                    # 'recent_hospitalizations': get_csv_list('recent_hospitalizations'),
-                    # 'medication_allergies': get_csv_list('medication_allergies'),
-                    # 'takes_medication': request.form.get('takes_medication') == 'yes',
-                    # 'medication_adherence': request.form.get('medication_adherence') or None,
                     
-                    # Indicadores Físicos
-                    'weight': request.form.get('weight') or None,
-                    'height': request.form.get('height') or None,
                     'mobility_status': request.form.get('mobility_status') or None,
-                    'functional_capacity': get_csv_list('functional_capacity'),
+                    'can_bathe_alone': request.form.get('can_bathe_alone') == 'yes',
+                    'can_dress_alone': request.form.get('can_dress_alone') == 'yes',
+                    'can_eat_alone': request.form.get('can_eat_alone') == 'yes',
                     
-                    # Saúde Mental e Cognitiva
                     'perceived_memory': request.form.get('perceived_memory') or None,
                     'mental_diagnoses': get_csv_list('mental_diagnoses'),
                     
-                    # Hábitos de Vida
                     'physical_activity_frequency': request.form.get('physical_activity_frequency') or None,
                     'sleep_quality': request.form.get('sleep_quality') or None,
                     'alcohol_consumption': request.form.get('alcohol_consumption') or None,
                     'smoking': request.form.get('smoking') or None,
-                    'diet_quality': request.form.get('diet_quality') or None,
                     
-                    # Rede de Apoio
-                    'lives_alone': request.form.get('lives_alone') == 'yes',
-                    'has_close_family': request.form.get('has_close_family') == 'yes',
                     'frequent_visits': request.form.get('frequent_visits') == 'yes',
                     'community_activities': request.form.get('community_activities') == 'yes',
                 }
             
+                # 1. AGORA SIM, CRIA NO FIREBASE E BD DE FORMA ATÔMICA SE FOR NECESSÁRIO
+                if 'temp_reg' in session:
+                    temp = session['temp_reg']
+                    try:
+                        firebase_user = AuthService.create_firebase_user(temp['email'], temp['password'])
+                        user_id = firebase_user['localId']
+                        created_fb = True
+                        
+                        UserRepository.create_user(user_id, temp['name'], temp['username'], temp['email'], temp['user_type'])
+                        
+                        # Set session for auth flow
+                        session['user_id'] = user_id
+                        session['user_type'] = temp['user_type']
+                        session['user_name'] = temp['name']
+                    except Exception as creation_err:
+                        # Se falhar logo aqui, repassa
+                        raise creation_err
+
+                # Se chegamos aqui, ou o usuário já era DB local ou criamos agorinha!
                 UserRepository.create_patient_profile(user_id, data)
                 
             elif user_type == 'health_agent':
@@ -190,9 +184,28 @@ def complete_registration():
                     'health_unit': request.form.get('health_unit'),
                     'territory_served': request.form.get('territory_served')
                 }
+                
+                if 'temp_reg' in session:
+                    temp = session['temp_reg']
+                    try:
+                        firebase_user = AuthService.create_firebase_user(temp['email'], temp['password'])
+                        user_id = firebase_user['localId']
+                        created_fb = True
+                        
+                        UserRepository.create_user(user_id, temp['name'], temp['username'], temp['email'], temp['user_type'])
+                        
+                        session['user_id'] = user_id
+                        session['user_type'] = temp['user_type']
+                        session['user_name'] = temp['name']
+                    except Exception as creation_err:
+                        raise creation_err
+                
                 UserRepository.create_agent_profile(user_id, data)
             
             flash("Cadastro concluído com sucesso!")
+            
+            # Limpa temporários
+            session.pop('temp_reg', None)
             
             # Redireciona para o dashboard do usuário
             session['is_active'] = True
@@ -202,6 +215,20 @@ def complete_registration():
                 return redirect(url_for('agent.dashboard'))
 
         except Exception as e:
+            # --- ROLLBACK FIREBASE IMPORTANTE ---
+            if created_fb and firebase_user and 'idToken' in firebase_user:
+                try:
+                    AuthService.delete_firebase_user(firebase_user['idToken'])
+                    # Usuário local também foi feito rollback automaticamente pela Exception no create_user ou create_profile
+                    # O SQLAlchemy faz db.session.rollback() internamente nas funções do repositorio
+                except Exception as rollback_err:
+                    print(f"Erro no rollback do Firebase: {rollback_err}")
+                
+                # Desfazer login da conta lixo
+                session.pop('user_id', None)
+                session.pop('user_type', None)
+                session.pop('user_name', None)
+            
             flash(f"Erro ao salvar dados complementares: {str(e)}")
             print(f"Completion error: {e}")
 

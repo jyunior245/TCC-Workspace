@@ -1,16 +1,20 @@
-
-from app.extensions.firebase_config import auth
+from app.extensions.firebase_config import auth, auth_admin
 from app.extensions.sql_alchemy import db as sq_db
 from app.models.user import User
 import json
+import firebase_admin.exceptions
 
 class AuthService:
     @staticmethod
     def _parse_firebase_error(e):
+        # Captura erros do Firebase Admin (SDK Oficial)
+        if isinstance(e, firebase_admin.exceptions.FirebaseError):
+            return f"Erro Administrativo Firebase: {str(e)}"
+            
         try:
-            #Pyrebase levanta uma exceção requests.exceptions.HTTPError com o JSON de erro no args[1]
-            # O JSON de erro contém o código de erro na chave 'error']['message']
+            # Pyrebase levanta uma exceção requests.exceptions.HTTPError
             error_json = json.loads(e.args[1])
+            print(f"--- DEBUG FIREBASE ERROR: {error_json}")
             error_code = error_json['error']['message']
             
             if "WEAK_PASSWORD" in error_code:
@@ -36,8 +40,14 @@ class AuthService:
     def create_firebase_user(email, password):
         """Creates a user in Firebase Auth and returns the user object."""
         try:
-            user = auth.create_user_with_email_and_password(email, password)
-            return user
+            if auth_admin:
+                # Usar Admin SDK para evitar restrições de sign-up público / ADMIN_ONLY_OPERATION
+                user_record = auth_admin.create_user(email=email, password=password)
+                return {'localId': user_record.uid}
+            else:
+                # Fallback para Pyrebase (Client)
+                user = auth.create_user_with_email_and_password(email, password)
+                return user
         except Exception as e:
             error_msg = AuthService._parse_firebase_error(e)
             raise Exception(error_msg)

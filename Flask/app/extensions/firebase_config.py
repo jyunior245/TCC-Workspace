@@ -1,10 +1,12 @@
-
 import pyrebase
+import firebase_admin
+from firebase_admin import credentials, auth as admin_auth
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configuração para Pyrebase (Client SDK - Usado para Login)
 config = {
   "apiKey": os.getenv("FIREBASE_API_KEY"),
   "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
@@ -19,16 +21,28 @@ config = {
 # Filtra as configurações vazias
 config = {k: v for k, v in config.items() if v}
 
-if not config:
-    print("AVISO: Sem configuração do Firebase encontrada nas variáveis de ambiente.")
-    print("Por favor, certifique-se de ter um arquivo .env com FIREBASE_API_KEY, etc.")
-
+# 1. Inicializar Firebase Admin SDK (Privilegiado - Usado para Criar Usuários)
+auth_admin = None
 try:
-    firebase = pyrebase.initialize_app(config)
-    auth = firebase.auth()
-    db = firebase.database()
+    cred_path = os.getenv("FIREBASE_ADMIN_SDK_PATH", "./firebase-key.json")
+    if os.path.exists(cred_path):
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        auth_admin = admin_auth
+        print("Firebase Admin SDK inicializado com sucesso.")
+    else:
+        print(f"AVISO: Arquivo de credenciais Admin não encontrado em {cred_path}")
 except Exception as e:
-    print(f"ERRO CRÍTICO: Falha ao inicializar o Firebase: {e}")
-    # Inicializa objetos vazios para evitar erros de importação
-    auth = None
-    db = None
+    print(f"Erro ao inicializar Firebase Admin: {e}")
+
+# 2. Inicializar Pyrebase (Client)
+auth = None
+db = None
+try:
+    if config:
+        firebase = pyrebase.initialize_app(config)
+        auth = firebase.auth()
+        db = firebase.database()
+        print("Pyrebase inicializado com sucesso.")
+except Exception as e:
+    print(f"Erro ao inicializar Pyrebase: {e}")

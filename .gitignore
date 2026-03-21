@@ -17,5 +17,5 @@ dist/
 build/
 *.egg-info/
 
-firebase-key.json   
-oauth-client-key.json   
+firebase-key.json
+oauth-client-key.json

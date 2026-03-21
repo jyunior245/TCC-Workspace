@@ -111,50 +111,35 @@
 {% block content %}
 <div id="toast-message"></div>
 <div class="auth-page-container">
-    <!-- AI ONBOARDING STARTER CARD -->
-    <div id="ai-onboarding-starter" style="width: 95%; max-width: 700px; margin-bottom: 16px; background: var(--md-sys-color-primary-container); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid var(--md-sys-color-primary);">
-                </div>
-            </div>
-            <div id="onboarding-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f8f9fa;">
-                <!-- Messages will appear here -->
-            </div>
-            <div style="padding: 16px; background: white; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px;">
-                <div id="ai-typing-indicator" style="display: none; color: var(--md-sys-color-primary); font-size: 14px; margin-bottom: 8px;">A IA está pensando...</div>
-                <div style="flex: 1; background: #f1f3f4; border-radius: 24px; padding: 8px 16px; color: #5f6368; font-size: 14px;">
-                    Clique no microfone abaixo para responder
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="auth-card" style="max-width: 700px; width: 95%; max-height: 90vh; overflow-y: auto;">
-        <div class="auth-header" id="step-header">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h2 class="headline-large" id="step-title" style="margin: 0;">Bem-vindo(a)!</h2>
-                <span id="step-counter" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 4px 12px; border-radius: 16px; font-weight: bold;">1/6</span>
-            </div>
-            <p class="body-large" id="step-subtitle">Precisamos coletar seus dados para a IA.</p>
+    <!-- MANUAL REGISTRATION LAYOUT -->
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 48px); padding: 24px; width: 100%;">
+        
+        <!-- MAIN FORM CARD -->
+        <div class="auth-card" style="width: 100%; max-width: 700px; display: flex; flex-direction: column; background: var(--md-sys-color-surface); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; margin: 0;">
             
-            <div style="width: 100%; height: 6px; background: var(--md-sys-color-surface-variant); border-radius: 3px; margin-top: 12px; overflow: hidden;">
-                <div id="progress-bar" style="height: 100%; width: 16%; background: var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
+            <div class="auth-header" id="step-header" style="padding: 24px; flex-shrink: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h2 class="headline-large" id="step-title" style="margin: 0;">Bem-vindo(a)!</h2>
+                    <span id="step-counter" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 4px 12px; border-radius: 16px; font-weight: bold;">1/6</span>
+                </div>
+                <p class="body-large" id="step-subtitle">Precisamos coletar seus dados para a IA.</p>
+                
+                <div style="width: 100%; height: 6px; background: var(--md-sys-color-surface-variant); border-radius: 3px; margin-top: 12px; overflow: hidden;">
+                    <div id="progress-bar" style="height: 100%; width: 16%; background: var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
+                </div>
             </div>
-        </div>
 
-        <form action="/register/complete" method="POST" id="wizard-form" class="auth-form" style="padding-top: 16px;">
+            <div style="flex: 1; overflow-y: auto; padding: 0 24px 24px 24px;">
+                <form action="/register/complete" method="POST" id="wizard-form" class="auth-form" style="padding-top: 16px;">
             
             <!-- STEP 1: Identificação Básica -->
             <div class="wizard-step active" id="step-1">
                 <h3 class="section-title">Dados Pessoais</h3>
                 
-                <div class="grid-2" style="margin-bottom: 16px;">
-                    <div class="md-text-field">
-                        <input type="text" name="cpf" id="cpf" placeholder=" " maxlength="14">
-                        <label for="cpf">CPF</label>
-                    </div>
-                    <div class="md-text-field">
-                        <input type="text" name="rg" id="rg" placeholder=" ">
-                        <label for="rg">RG</label>
-                    </div>
+                <div class="md-text-field" style="margin-bottom: 24px;">
+                    <input type="text" name="cpf" id="cpf" placeholder=" " maxlength="14">
+                    <label for="cpf">CPF</label>
+                    <div id="cpf-error" style="color: #f44336; font-size: 13px; font-weight: 500; display: none; margin-top: 4px; position: absolute; bottom: -22px; left: 12px;">Este CPF já está cadastrado.</div>
                 </div>
 
                 <div class="grid-2" style="margin-bottom: 16px;">
@@ -198,7 +183,7 @@
                     <label for="marital_status">Estado Civil</label>
                 </div>
                 
-                <div class="md-text-field" style="margin-bottom: 12px;">
+                <div class="md-text-field" style="margin-bottom: 24px;">
                     <select name="education_level" id="education_level">
                         <option value="" disabled selected></option>
                         <option value="Nenhum">Sem instrução / Analfabeto</option>
@@ -208,11 +193,6 @@
                         <option value="Superior">Ensino Superior</option>
                     </select>
                     <label for="education_level">Escolaridade</label>
-                </div>
-
-                <div class="md-text-field" style="margin-bottom: 24px;">
-                    <input type="text" name="work_status" id="work_status" placeholder=" ">
-                    <label for="work_status">Ocupação Atual / Profissão</label>
                 </div>
 
                 <button type="button" class="md-button filled" style="width: 100%; height: 56px; font-size: 18px;" onclick="nextStep(2)">Continuar</button>
@@ -269,10 +249,7 @@
                     </div>
                 </div>
 
-                <div class="md-text-field" style="margin-bottom: 24px;">
-                    <input type="text" name="reference_point" id="reference_point" placeholder=" ">
-                    <label for="reference_point">Ponto de Referência</label>
-                </div>
+
 
                 <div style="display: flex; gap: 12px;">
                     <button type="button" class="md-button outlined" style="flex: 1;" onclick="prevStep(1)">Voltar</button>
@@ -282,30 +259,10 @@
 
             <!-- STEP 3: Moradia & Socioeconômico -->
             <div class="wizard-step" id="step-3" style="display: none;">
-                <h3 class="section-title">Como é a sua moradia?</h3>
-                <div class="grid-3" style="margin-bottom: 12px;">
-                    <div class="md-text-field">
-                        <select name="housing_type" id="housing_type">
-                            <option value="" disabled selected></option>
-                            <option value="Casa">Casa</option>
-                            <option value="Apartamento">Apt.</option>
-                            <option value="Quarto">Quarto</option>
-                        </select>
-                        <label for="housing_type">Tipo</label>
-                    </div>
-                    <div class="md-text-field">
-                        <select name="housing_status" id="housing_status">
-                            <option value="" disabled selected></option>
-                            <option value="Propria">Própria</option>
-                            <option value="Alugada">Alugada</option>
-                            <option value="Cedida">Cedida</option>
-                        </select>
-                        <label for="housing_status">Status</label>
-                    </div>
-                    <div class="md-text-field">
-                        <input type="number" name="num_residents" id="num_residents" placeholder=" ">
-                        <label for="num_residents">Qtd. Moradores</label>
-                    </div>
+                <h3 class="section-title">Moradores</h3>
+                <div class="md-text-field" style="margin-bottom: 12px;">
+                    <input type="number" name="num_residents" id="num_residents" placeholder=" ">
+                    <label for="num_residents">Qtd. Moradores na sua casa</label>
                 </div>
 
                 <h3 class="section-title">Infraestrutura</h3>
@@ -317,38 +274,14 @@
                     <label class="tactile-card checkbox-card"><input type="checkbox" name="has_internet" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">wifi</span><span style="font-size: 11px;">Internet</span></div></label>
                 </div>
 
-                <h3 class="section-title">Renda</h3>
-                <div class="grid-2" style="margin-bottom: 12px;">
-                    <div class="md-text-field">
-                        <input type="text" name="income" id="income" placeholder=" ">
-                        <label for="income">Renda Total Bruta</label>
-                    </div>
-                    <div class="md-text-field">
-                        <select name="income_source" id="income_source">
-                            <option value="" disabled selected></option>
-                            <option value="Aposentadoria">Aposentadoria</option>
-                            <option value="Pensao">Pensão</option>
-                            <option value="Trabalho">Trabalho</option>
-                            <option value="Outro">Outro</option>
-                        </select>
-                        <label for="income_source">Fonte Pagadora</label>
-                    </div>
-                </div>
+
 
                 <div class="toggle-row">
                     <label for="financially_dependent">Você depende financeiramente de alguém?</label>
                     <input type="checkbox" name="financially_dependent" id="financially_dependent" value="yes">
                 </div>
 
-                <div class="md-text-field" style="margin-bottom: 24px;">
-                    <select name="food_insecurity" id="food_insecurity">
-                        <option value="" disabled selected></option>
-                        <option value="Nunca">Nunca faltou comida</option>
-                        <option value="As vezes">Às vezes falta comida/dinheiro para comida</option>
-                        <option value="Frequente">Falta comida frequentemente</option>
-                    </select>
-                    <label for="food_insecurity">Segurança Alimentar</label>
-                </div>
+
 
                 <div style="display: flex; gap: 12px;">
                     <button type="button" class="md-button outlined" style="flex: 1;" onclick="prevStep(2)">Voltar</button>
@@ -358,23 +291,25 @@
 
             <!-- STEP 4: Saúde Física e Doenças Crônicas -->
             <div class="wizard-step" id="step-4" style="display: none;">
-                <h3 class="section-title">Medidas e Locomoção</h3>
-                <div class="grid-2" style="margin-bottom: 16px;">
-                    <div class="md-text-field">
-                        <input type="text" name="weight" id="weight" placeholder="Ex: 70kg">
-                        <label for="weight">Peso (kg)</label>
-                    </div>
-                    <div class="md-text-field">
-                        <input type="text" name="height" id="height" placeholder="Ex: 1.65m">
-                        <label for="height">Altura (m)</label>
-                    </div>
-                </div>
-                
                 <h3 class="section-title">Como você se locomove?</h3>
                 <div class="grid-3" style="margin-bottom: 24px;">
                     <label class="tactile-card radio-card"><input type="radio" name="mobility_status" value="Ando Sozinho" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px;">directions_walk</span><span style="font-size: 14px;">Sozinho</span></div></label>
                     <label class="tactile-card radio-card"><input type="radio" name="mobility_status" value="Uso Bengala ou Andador" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px;">elderly</span><span style="font-size: 14px;">Apoio</span></div></label>
                     <label class="tactile-card radio-card"><input type="radio" name="mobility_status" value="Cadeira de Rodas" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px;">accessible</span><span style="font-size: 14px;">Cadeira</span></div></label>
+                </div>
+
+                <h3 class="section-title">Capacidade Funcional (Faz sozinho?)</h3>
+                <div class="toggle-row">
+                    <label for="can_bathe_alone">Tomar banho?</label>
+                    <input type="checkbox" name="can_bathe_alone" id="can_bathe_alone" value="yes">
+                </div>
+                <div class="toggle-row">
+                    <label for="can_dress_alone">Se vestir?</label>
+                    <input type="checkbox" name="can_dress_alone" id="can_dress_alone" value="yes">
+                </div>
+                <div class="toggle-row">
+                    <label for="can_eat_alone">Fazer refeições?</label>
+                    <input type="checkbox" name="can_eat_alone" id="can_eat_alone" value="yes">
                 </div>
 
                 <h3 class="section-title">Doenças Crônicas</h3>
@@ -476,15 +411,11 @@
 
                 <h3 class="section-title">Sua Rotina</h3>
                 <div class="toggle-row">
-                    <label for="lives_alone">Você mora sozinho(a)?</label>
-                    <input type="checkbox" name="lives_alone" id="lives_alone" value="yes">
+                    <label for="frequent_visits">Recebe visitas de familiares/amigos com frequência?</label>
+                    <input type="checkbox" name="frequent_visits" id="frequent_visits" value="yes">
                 </div>
                 <div class="toggle-row">
-                    <label for="has_close_family">Possui familiares que te ajudam?</label>
-                    <input type="checkbox" name="has_close_family" id="has_close_family" value="yes">
-                </div>
-                <div class="toggle-row">
-                    <label for="community_activities">Participa de grupos (Igreja, Forró, Exercícios)?</label>
+                    <label for="community_activities">Participa de atividades na comunidade (Igreja, Forró, etc)?</label>
                     <input type="checkbox" name="community_activities" id="community_activities" value="yes">
                 </div>
 
@@ -495,7 +426,10 @@
             </div>
             
         </form>
-    </div>
+            </div> <!-- END CARD -->
+            
+        </form>
+    </div> <!-- END LAYOUT -->
 
     <script>
         const totalSteps = 6;
@@ -534,6 +468,39 @@
 
         document.getElementById('cpf').addEventListener('input', function(e) {
             e.target.value = maskCPF(e.target.value);
+            // Hide error when typing
+            document.getElementById('cpf-error').style.display = 'none';
+        });
+
+        let isCpfValid = false;
+        document.getElementById('cpf').addEventListener('blur', async function(e) {
+            const cpfVal = e.target.value;
+            const errorDiv = document.getElementById('cpf-error');
+            
+            if (cpfVal.length === 14) {
+                try {
+                    const response = await fetch('/api/check_cpf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cpf: cpfVal })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.exists) {
+                        errorDiv.style.display = 'block';
+                        isCpfValid = false;
+                        showToast("Este CPF já está cadastrado.");
+                    } else {
+                        errorDiv.style.display = 'none';
+                        isCpfValid = true;
+                    }
+                } catch (err) {
+                    console.error("Erro na validação do CPF", err);
+                    isCpfValid = true; // Allow passage if network fails
+                }
+            } else {
+                isCpfValid = false;
+            }
         });
 
         document.getElementById('caregiver_phone').addEventListener('input', function(e) {
@@ -693,13 +660,12 @@
             if (step === 1) {
                 const cpf = document.getElementById('cpf').value;
                 if (!cpf || cpf.length < 14) { showToast("Por favor, preencha o CPF corretamente (14 dígitos)."); return false; }
-                if(!check('rg', 'RG')) return false;
+                if (!isCpfValid) { showToast("O CPF fornecido já está em uso ou é inválido."); return false; }
                 if(!check('date_of_birth', 'Data Nasc.')) return false;
                 if(!check('nationality', 'Nacionalidade')) return false;
                 if (!document.querySelector('input[name="gender"]:checked')) { showToast("Por favor, selecione seu Sexo Biológico."); return false; }
                 if(!check('marital_status', 'Estado Civil')) return false;
                 if(!check('education_level', 'Escolaridade')) return false;
-                if(!check('work_status', 'Ocupação Atual / Profissão')) return false;
             }
             if (step === 2) {
                 const cep = document.getElementById('cep').value.replace(/\D/g, "");
@@ -713,15 +679,9 @@
                 // Reference point is optional
             }
             if (step === 3) {
-                if(!check('housing_type', 'Tipo de Moradia')) return false;
-                if(!check('housing_status', 'Status da Moradia')) return false;
-                if(!check('num_residents', 'Qtd. Moradores')) return false;
-                if(!check('income', 'Renda Total Bruta')) return false;
-                if(!check('income_source', 'Fonte Pagadora')) return false;
-                if(!check('food_insecurity', 'Segurança Alimentar')) return false;
+                if(!check('num_residents', 'Qtd. Moradores na sua casa')) return false;
             }
             if (step === 4) {
-                // Weight and Height are optional
                 if (!document.querySelector('input[name="mobility_status"]:checked')) { showToast("Por favor, selecione como você se locomove."); return false; }
             }
             if (step === 5) {
