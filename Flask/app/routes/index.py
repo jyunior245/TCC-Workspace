@@ -246,6 +246,28 @@ def logout():
     flash("Sessão encerrada.")
     return redirect(url_for('login.login'))
 
+@index_bp.route('/delete_account', methods=['POST'])
+def delete_account():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Usuário não autenticado.'}), 401
+
+    user_id = session['user_id']
+    try:
+        # 1. Deleta do Banco de Dados local e histórico
+        success, message = UserRepository.delete_user_completely(user_id)
+        if not success:
+            return jsonify({'status': 'error', 'message': message}), 400
+            
+        # 2. Deleta do Firebase via Admin SDK (limpa até vínculos Google OAuth)
+        AuthService.delete_user_by_uid(user_id)
+        
+        # 3. Limpa sessão do Flask
+        session.clear()
+        
+        return jsonify({'status': 'success', 'message': 'Conta e dados apagados com sucesso.', 'redirect_url': url_for('login.login')})
+    except Exception as e:
+        print(f"Erro ao deletar conta: {e}")
+        return jsonify({'status': 'error', 'message': f'Erro ao deletar conta: {str(e)}'}), 500
 
 @index_bp.route('/')
 def index():

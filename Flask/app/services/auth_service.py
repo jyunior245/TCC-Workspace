@@ -71,3 +71,17 @@ class AuthService:
         except Exception as e:
             print(f"Failed to rollback Firebase user: {e}")
 
+    @staticmethod
+    def delete_user_by_uid(uid):
+        """Deletes a user directly via Admin SDK using UID."""
+        try:
+            from app.extensions.firebase_config import auth_admin
+            if auth_admin:
+                auth_admin.delete_user(uid)
+                print(f"User {uid} deleted successfully from Firebase via Admin SDK.")
+            else:
+                raise Exception("Admin SDK not configured for user deletion.")
+        except Exception as e:
+            error_msg = AuthService._parse_firebase_error(e)
+            raise Exception(f"Erro ao excluir conta do Firebase: {error_msg}")
+

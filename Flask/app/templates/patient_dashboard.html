@@ -31,10 +31,14 @@
       </button>
 
     </nav>
-    <div class="sidebar-footer">
-      <button class="nav-btn logout" onclick="window.location.href='/logout'">
+    <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px; padding: 16px;">
+      <button class="nav-btn logout" onclick="window.location.href='/logout'" style="width: 100%; justify-content: flex-start;">
         <span class="material-icons-outlined">logout</span>
         <span>Sair</span>
+      </button>
+      <button class="nav-btn delete-account" onclick="confirmDeleteAccount()" style="width: 100%; justify-content: flex-start; color: var(--md-sys-color-error); --md-sys-color-primary: var(--md-sys-color-error);">
+        <span class="material-icons-outlined">delete_forever</span>
+        <span>Deletar Conta</span>
       </button>
     </div>
   </aside>
@@ -195,8 +199,36 @@
     </main>
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/patient_dashboard.js') }}"></script>
+<script>
+function confirmDeleteAccount() {
+    if (!confirm("Esta ação é irreversível. Todos os seus dados, histórico de saúde e acesso serão apagados permanentemente de nossa base e do Google. Continuar?")) {
+        return;
+    }
+
+    fetch('/delete_account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = data.redirect_url;
+        } else {
+            alert("Erro: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Erro de rede.");
+    });
+}
+</script>
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 {% endblock %}

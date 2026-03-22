@@ -116,3 +116,29 @@ class UserRepository:
         # Retorna lista de perfis de pacientes vinculados a esse ACS
         return Patient.query.filter_by(agent_id=agent_id).all()
 
+    @staticmethod
+    def delete_user_completely(user_id):
+        try:
+            from app.models.chat_history import ChatHistory
+            
+            # 1. Recuperar usuário
+            user = User.query.get(user_id)
+            if not user:
+                return False, "Usuário não encontrado no banco de dados local."
+            
+            # 2. Apagar históricos de chat pendentes referentes a esse usuário
+            ChatHistory.query.filter_by(user_id=user_id).delete()
+            
+            # 3. Apagar o perfil complementar associado
+            if user.user_type == 'patient':
+                Patient.query.filter_by(id=user_id).delete()
+            elif user.user_type == 'health_agent':
+                HealthAgent.query.filter_by(id=user_id).delete()
+                
+            # 4. Apagar o usuário mestre
+            db.session.delete(user)
+            db.session.commit()
+            return True, "Todos os dados locais foram excluídos com sucesso."
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Falha ao apagar dados do banco de dados: {str(e)}")
