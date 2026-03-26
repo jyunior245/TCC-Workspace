@@ -19,23 +19,19 @@ class RAGService:
         )
         self.collection = self.client.get_or_create_collection(name="sus_protocols")
         
-        self._model = None
         self.offline_mode = False
-        self._model_loading = False
-
-    @property
-    def model(self):
-        if self._model is None and not self.offline_mode:
-            try:
-                print("⌛ Carregando modelo de embeddings na primeira requisição...", flush=True)
-                self.offline_mode = False
-                from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-            except Exception as e:
-                print(f"⚠️ Erro ao carregar modelo: {e}")
-                self.offline_mode = True
-                self._model = None
-        return self._model
+        
+        try:
+            print("⌛ Inicializando modelo de embeddings no startup do servidor...", flush=True)
+            import torch
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            print(f"⚙️ Dispositivo selecionado para embeddings: {device.upper()}", flush=True)
+            self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device=device)
+            print("✅ Modelo de embeddings carregado com sucesso na memória!", flush=True)
+        except Exception as e:
+            print(f"⚠️ Erro ao carregar modelo de embeddings: {e}", flush=True)
+            self.offline_mode = True
+            self.model = None
 
     def load_pdf_protocols(self):
         """Lê todos os PDFs na pasta de protocolos e os adiciona ao banco"""

@@ -9,12 +9,22 @@ services:
       - ./oauth-client-key.json:/app/oauth-client-key.json
       - ./firebase-key.json:/app/firebase-key.json
       - chroma_data:/app/app/data/vector_db
+      
     env_file:
       - .env
     environment:
       - RUNNING_IN_DOCKER=true
       - OLLAMA_URL=http://host.docker.internal:11434/api/generate
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${DATABASE_NAME}
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
     depends_on:
       - db
     extra_hosts:

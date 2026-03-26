@@ -20,22 +20,23 @@ class HealthAgent:
         self.llama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 
     def get_response(self, message, user_id=None):
+        print("ETAPA 1")
+        print(f"\n[AI][USER] Nova requisição recebida: '{message}'", flush=True)
         # 1. CLASSIFICAÇÃO DE INTENÇÃO
         intent = self._classify_intent(message)
+        print(f"[AI][INTENT] Intenção de saúde: {intent}", flush=True)
         
         # 2. MEMÓRIA DE LONGO PRAZO (Busca no Postgres)
-        persistent_history = ""
+        print("ETAPA 2")
+        last_chats = []
         if user_id:
-            # Pega as últimas 5 mensagens do usuário
-            last_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(5).all()
-            persistent_history = "\n".join([f"Paciente: {c.message}\nVocê: {c.response}" for c in reversed(last_chats)])
-            print(f"[AI][MEMÓRIA] Recuperadas {len(last_chats)} interações anteriores do banco.")
-            if persistent_history:
-                print("--- HISTÓRICO INJETADO ---")
-                print(persistent_history)
-                print("--------------------------")
+            # Pega as últimas 5 mensagens do usuário para estruturação (ordem cronológica)
+            recent_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(5).all()
+            last_chats = list(reversed(recent_chats))
+            print(f"[AI][MEMÓRIA] Recuperadas {len(last_chats)} interações anteriores do banco p/ API de Chat.")
 
         # 3. BUSCA RAG (Apenas se a intenção for de saúde)
+        print("ETAPA 3")
         context_sus = ""
         sources = []
         if intent in ["HEALTH_QUERY", "EMERGENCY"]:
@@ -47,13 +48,18 @@ class HealthAgent:
         rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
         print(f"[AI][RAG] intent={intent} hit={rag_hit} fontes={sources}")
 
-        # 4. CONSTRUÇÃO DO PROMPT FINAL
-        prompt = self._build_prompt(message, intent, context_sus, persistent_history, sources)
+        # 4. CONSTRUÇÃO DO PROMPT FINAL VIA CHAT MESSAGES
+        print("ETAPA 4")
+        messages = self._build_chat_messages(message, intent, context_sus, last_chats, sources)
         
         # 5. GERA RESPOSTA
-        response = self._call_llama(prompt)
+        print("ETAPA 5")
+        print(f"[AI][PROCESSANDO] Gerando resposta no LLM...", flush=True)
+        response = self._call_llama_chat(messages)
+        print(f"[AI][RESPOSTA] {response}\n", flush=True)
         
         # 6. PERSISTE NO BANCO DE DADOS
+        print("ETAPA 6")
         if user_id:
             new_chat = ChatHistory(user_id=user_id, message=message, response=response, intent=intent)
             db.session.add(new_chat)
@@ -194,7 +200,7 @@ JSON gerado:
             return {"nivel": "BAIXA", "justificativa": "Erro interno no processamento com a Inteligência Artificial."}
 
     
-    def _build_prompt(self, message, intent, context, history, sources=None):
+    def _build_chat_messages(self, message, intent, context, last_chats, sources=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
 
         if intent == "EMERGENCY":
@@ -218,25 +224,24 @@ JSON gerado:
         fontes_instruction = ""
         if sources:
             fontes_str = ", ".join(sources)
-            fontes_instruction = f'Ao final da resposta, inclua a linha: "Fontes: {fontes_str}"'
+            fontes_instruction = f'Ao final da resposta, inclua a linha: "Fontes: {fontes_str}"\n'
 
-        history_section = ""
-        if history:
-            history_section = f"\nLembre-se do CONTEXTO da conversa até agora:\n{history}\n"
+        system_content = f"{system_rules}\n\n{rag_guidance}\n\n{fontes_instruction}"
+        if context:
+            system_content += f"\nCONTEXTO-BASE (Protocolos do SUS):\n{context}\n"
+        
+        system_content += "\nResponda diretamente ao paciente em 2-5 frases, mantendo a continuidade do assunto se for uma pergunta de seguimento."
 
-        return f"""
-        {system_rules}
+        # O Histórico é passado como mensagens distintas (não concatenado)
+        messages = [{"role": "system", "content": system_content.strip()}]
 
-        {rag_guidance}
+        for chat in last_chats:
+            messages.append({"role": "user", "content": chat.message})
+            messages.append({"role": "assistant", "content": chat.response})
 
-        CONTEXTO-BASE (Protocolos do SUS):
-        {context or '[Nenhum protocolo específico para esta mensagem]'}
-        {history_section}
-        O paciente enviou uma nova mensagem. Responda diretamente ao paciente em 2–5 frases, mantendo a continuidade do assunto se for uma pergunta de seguimento.
-        IMPORTANTE: Não escreva 'Você:', 'Assistente:', 'Paciente:' nem qualquer outro prefixo na sua resposta. Comece a frase diretamente.
-
-        Nova mensagem do Paciente: {message}
-        Sua Resposta:"""
+        messages.append({"role": "user", "content": message})
+        
+        return messages
 
 
     def _needs_medical_analysis(self, text):
@@ -260,4 +265,14 @@ JSON gerado:
             return res.json().get("response", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
             print(f"Erro no Llama: {e}")
+            return "Erro de conexão com o Llama 3.2:3b (Ollama). Verifique se ele está rodando."
+
+    def _call_llama_chat(self, messages):
+        chat_url = self.ollama_url.replace('/api/generate', '/api/chat')
+        payload = {"model": self.llama_model, "messages": messages, "stream": False}
+        try:
+            res = requests.post(chat_url, json=payload, timeout=90)
+            return res.json().get("message", {}).get("content", "Desculpe, não consegui gerar uma resposta.")
+        except Exception as e:
+            print(f"Erro no Llama Chat: {e}")
             return "Erro de conexão com o Llama 3.2:3b (Ollama). Verifique se ele está rodando."
