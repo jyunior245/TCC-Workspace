@@ -28,7 +28,7 @@ class HealthAgent:
 
         # 1. CLASSIFICAÇÃO DE INTENÇÃO (COMENTADO PARA TESTE)
         start_step = time.time()
-        # intent = self._classify_intent(message)
+        #intent = self._classify_intent(message)
         intent = "HEALTH_QUERY"
         # print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
         
@@ -51,7 +51,7 @@ class HealthAgent:
                 print(f"[AI][ERROR] Falha no RAG: {e}")
         rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
         print(f"[AI][TIME] 3. Busca RAG (Embeddings): {time.time() - start_step:.2f}s", flush=True)
-
+        
         # 4. CONSTRUÇÃO DO PROMPT
         start_step = time.time()
         messages = self._build_chat_messages(message, intent, context_sus, last_chats, sources, user_id)

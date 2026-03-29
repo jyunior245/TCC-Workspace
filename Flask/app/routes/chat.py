@@ -187,3 +187,4 @@ def end_chat():
     thread.start()
     
     return jsonify({'status': 'success', 'message': 'Contexto do paciente está sendo processado.'})
+    return jsonify({'status': 'success', 'message': 'Contexto do paciente está sendo processado.'})
