@@ -1,11 +1,13 @@
 import os
 import requests
 import json
+import time
 from datetime import date, datetime
 from app.services.rag_service import rag_service
 from app.models.chat_history import ChatHistory
 from app.models.daily_report import DailyReport
 from app.models.patient import Patient
+from app.models.patient_context import PatientContext
 from app.extensions.sql_alchemy import db
 
 class HealthAgent:
@@ -20,51 +22,56 @@ class HealthAgent:
         self.llama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 
     def get_response(self, message, user_id=None):
-        print("ETAPA 1")
-        print(f"\n[AI][USER] Nova requisição recebida: '{message}'", flush=True)
-        # 1. CLASSIFICAÇÃO DE INTENÇÃO
-        intent = self._classify_intent(message)
-        print(f"[AI][INTENT] Intenção de saúde: {intent}", flush=True)
+        start_total = time.time()
+        print(f"\n[AI][DEBUG] === INÍCIO DO PROCESSAMENTO ===", flush=True)
+        print(f"[AI][USER] Mensagem: '{message}'", flush=True)
+
+        # 1. CLASSIFICAÇÃO DE INTENÇÃO (COMENTADO PARA TESTE)
+        start_step = time.time()
+        # intent = self._classify_intent(message)
+        intent = "HEALTH_QUERY"
+        # print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
         
-        # 2. MEMÓRIA DE LONGO PRAZO (Busca no Postgres)
-        print("ETAPA 2")
+        # 2. MEMÓRIA DE LONGO PRAZO
+        start_step = time.time()
         last_chats = []
         if user_id:
-            # Pega as últimas 5 mensagens do usuário para estruturação (ordem cronológica)
             recent_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(5).all()
             last_chats = list(reversed(recent_chats))
-            print(f"[AI][MEMÓRIA] Recuperadas {len(last_chats)} interações anteriores do banco p/ API de Chat.")
+        print(f"[AI][TIME] 2. Busca de Memória: {time.time() - start_step:.2f}s", flush=True)
 
-        # 3. BUSCA RAG (Apenas se a intenção for de saúde)
-        print("ETAPA 3")
+        # 3. BUSCA RAG
+        start_step = time.time()
         context_sus = ""
         sources = []
         if intent in ["HEALTH_QUERY", "EMERGENCY"]:
             try:
                 context_sus, sources = rag_service.query_protocols_with_sources(message)
-            except AttributeError:
-                context_sus = rag_service.query_protocols(message)
-                sources = []
+            except Exception as e:
+                print(f"[AI][ERROR] Falha no RAG: {e}")
         rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
-        print(f"[AI][RAG] intent={intent} hit={rag_hit} fontes={sources}")
+        print(f"[AI][TIME] 3. Busca RAG (Embeddings): {time.time() - start_step:.2f}s", flush=True)
 
-        # 4. CONSTRUÇÃO DO PROMPT FINAL VIA CHAT MESSAGES
-        print("ETAPA 4")
-        messages = self._build_chat_messages(message, intent, context_sus, last_chats, sources)
+        # 4. CONSTRUÇÃO DO PROMPT
+        start_step = time.time()
+        messages = self._build_chat_messages(message, intent, context_sus, last_chats, sources, user_id)
+        print(f"[AI][TIME] 4. Montagem do Template: {time.time() - start_step:.2f}s", flush=True)
         
         # 5. GERA RESPOSTA
-        print("ETAPA 5")
+        start_step = time.time()
         print(f"[AI][PROCESSANDO] Gerando resposta no LLM...", flush=True)
         response = self._call_llama_chat(messages)
-        print(f"[AI][RESPOSTA] {response}\n", flush=True)
-        
-        # 6. PERSISTE NO BANCO DE DADOS
-        print("ETAPA 6")
+        print(f"[AI][TIME] 5. Geração Llama Chat: {time.time() - start_step:.2f}s", flush=True)
+
+        # 6. PERSISTE NO BANCO
+        start_step = time.time()
         if user_id:
             new_chat = ChatHistory(user_id=user_id, message=message, response=response, intent=intent)
             db.session.add(new_chat)
             db.session.commit()
-            
+        print(f"[AI][TIME] 6. Persistência DB: {time.time() - start_step:.2f}s", flush=True)
+        
+        print(f"[AI][DEBUG] === FIM DO PROCESSAMENTO ({time.time() - start_total:.2f}s total) ===\n", flush=True)
         return response
 
     def generate_daily_report(self, patient_id, target_date=None):
@@ -127,23 +134,80 @@ Gere o Relatório Diário de Saúde agora:
             print(f"Erro ao salvar relatório diário: {str(e)}")
             return report_content, f"Relatório gerado, mas erro ao salvar no banco: {str(e)}"
 
-    def _classify_intent(self, message):
-        """Usa o Llama para classificar o que o idoso quer"""
-        classification_prompt = f"""
-        Classifique a intenção da mensagem do usuário em UMA ÚNICA PALAVRA:
-        - GREETING: Se for apenas um 'olá', 'bom dia', etc.
-        - HEALTH_QUERY: Se for uma dúvida comum de saúde ou sintomas leves.
-        - EMERGENCY: Se for um relato de dor aguda, falta de ar ou risco de vida.
-        - OTHER: Qualquer outro assunto.
-
-        Mensagem: "{message}"
-        Intenção:"""
+    def update_patient_context(self, patient_id):
+        """Resume o histórico recente do paciente em um dicionário estruturado e salva no banco de dados (Janela de Contexto)."""
+        chats = ChatHistory.query.filter_by(user_id=patient_id).order_by(ChatHistory.timestamp.asc()).all()
+        if not chats:
+            return None
         
-        intent = self._call_llama(classification_prompt).strip().upper()
-        # Limpeza para garantir que venha apenas a palavra
-        for category in ["GREETING", "HEALTH_QUERY", "EMERGENCY"]:
-            if category in intent: return category
-        return "OTHER"
+        conversation_transcript = "\n".join([
+            f"Paciente: {c.message}\nIA: {c.response}\n" 
+            for c in chats
+        ])
+
+        summary_prompt = f"""
+Você é um sistema de auditoria e memória de longo prazo para um Agente de Saúde Inteligente.
+Sua tarefa é analisar todo o histórico de conversas do paciente e extrair um **JSON estruturado** com as informações vitais.
+Esse JSON será usado como a Janela de Contexto (Knowledge Base) para que o agente inteligente de saúde se lembre do paciente nas próximas conversas.
+
+Histórico completo:
+{conversation_transcript}
+
+INSTRUÇÃO OBRIGATÓRIA DE FORMATO:
+Você DEVE retornar APENAS um objeto JSON válido, sem nenhum outro texto antes ou depois. 
+IMPORTANTE: Use caracteres acentuados diretamente (ex: "cabeça", "paciência") no JSON, NÃO use sequências de escape unicode (ex: "\u00e7").
+Siga EXATAMENTE esta estrutura:
+{{
+  "nome_do_paciente": "Extrair se o paciente informou o nome, senão omitir ou null",
+  "data_ultima_conversa": "{date.today().isoformat()}",
+  "sintomas_relatados": ["Lista de sintomas extraídos", "..."],
+  "medicacoes_relatadas": ["Lista de medicações que o paciente disse tomar", "..."],
+  "acoes_recomendadas_pela_ia": ["Principais ações que a IA recomendou no passado"],
+  "observacoes_adicionais": "Observações relevantes, histórico social, etc"
+}}
+"""
+        response_text = self._call_llama(summary_prompt).strip()
+        try:
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_str = response_text[start_idx:end_idx+1]
+                context_dict = json.loads(json_str)
+                
+                existing_context = PatientContext.query.filter_by(patient_id=patient_id).first()
+                if existing_context:
+                    existing_context.context_data = context_dict
+                    existing_context.updated_at = datetime.utcnow()
+                else:
+                    new_context = PatientContext(patient_id=patient_id, context_data=context_dict)
+                    db.session.add(new_context)
+                db.session.commit()
+                print(f"[AI CONTEXT] Contexto Atualizado com Sucesso para paciente {patient_id}.")
+                return context_dict
+            else:
+                print(f"[AI CONTEXT ERROR] JSON não encontrado na resposta.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}")
+        return None
+
+    # def _classify_intent(self, message):
+    #     """Usa o Llama para classificar o que o idoso quer (COMENTADO PARA TESTE)"""
+    #     classification_prompt = f"""
+    #     Classifique a intenção da mensagem do usuário em UMA ÚNICA PALAVRA:
+    #     - GREETING: Se for apenas um 'olá', 'bom dia', etc.
+    #     - HEALTH_QUERY: Se for uma dúvida comum de saúde ou sintomas leves.
+    #     - EMERGENCY: Se for um relato de dor aguda, falta de ar ou risco de vida.
+    #     - OTHER: Qualquer outro assunto.
+    #
+    #     Mensagem: "{message}"
+    #     Intenção:"""
+    #     
+    #     intent = self._call_llama(classification_prompt).strip().upper()
+    #     # Limpeza para garantir que venha apenas a palavra
+    #     for category in ["GREETING", "HEALTH_QUERY", "EMERGENCY"]:
+    #         if category in intent: return category
+    #     return "OTHER"
 
     def analyze_patient_triage(self, patient_history_text):
         """Analisa os relatórios do paciente e retorna JSON de prioridade (ALTA, MÉDIA, BAIXA) com justificativa."""
@@ -200,8 +264,23 @@ JSON gerado:
             return {"nivel": "BAIXA", "justificativa": "Erro interno no processamento com a Inteligência Artificial."}
 
     
-    def _build_chat_messages(self, message, intent, context, last_chats, sources=None):
+    def _build_chat_messages(self, message, intent, context, last_chats, sources=None, user_id=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
+
+        # Injecao de Janela de Contexto (KB)
+        if user_id:
+            try:
+                user_context = PatientContext.query.filter_by(patient_id=user_id).first()
+                if user_context and user_context.context_data:
+                    kb_data = user_context.context_data
+                    nome = kb_data.get("nome_do_paciente")
+                    if nome and nome != "null":
+                        system_rules += f" O nome do paciente é {nome}."
+                    
+                    system_rules += f"\n\nMEMÓRIA DO PACIENTE (Janela de Contexto):\n{json.dumps(kb_data, ensure_ascii=False)}\n"
+                    system_rules += "Use essa memória para dar respostas mais personalizadas, amigáveis e acompanhar o estado do paciente."
+            except Exception as e:
+                print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
 
         if intent == "EMERGENCY":
             system_rules += " ATENÇÃO: Possível emergência. Oriente o paciente a buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."

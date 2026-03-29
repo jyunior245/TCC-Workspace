@@ -56,6 +56,19 @@ class VoiceService:
         communicate = edge_tts.Communicate(text, self.voice)
         await communicate.save(output_file)
 
+    async def stream_audio_generator(self, text):
+        """Gera o áudio em chunks (streaming) para o Flask."""
+        cleaned = self._sanitize_text(text)
+        if not cleaned:
+            return
+            
+        communicate = edge_tts.Communicate(cleaned, self.voice)
+        async for chunk in communicate.stream():
+            if chunk.get("type") == "audio":
+                data = chunk.get("data")
+                if data:
+                    yield data
+
     def generate_base64_audio(self, text):
         """Transforma texto em áudio natural e retorna em base64."""
         import base64

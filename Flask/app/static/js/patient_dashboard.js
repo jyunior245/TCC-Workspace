@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
           updateTranscription('Ouvindo...');
         };
         rec.onresult = (e) => {
+          if (isAgentSpeaking) return; // Ignora eco da própria IA
           if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
           const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
           updateTranscription(text);
@@ -77,36 +78,43 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         rec.onerror = (e) => {
           if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
-          console.warn('STT error', e);
+          console.warn('[STT] Recognition Error:', e.error, e);
           let msg = 'Erro no reconhecimento de voz. Você pode digitar sua pergunta.';
           switch(e.error){
             case 'not-allowed':
             case 'service-not-allowed':
-              msg = 'Permissão de microfone negada. Habilite o microfone nas permissões do navegador para este site.';
+              msg = 'Permissão de microfone negada. Habilite o microfone nas permissões do navegador.';
               break;
             case 'no-speech':
-              msg = 'Não ouviu fala. Vamos tentar novamente...';
-              try{ rec.stop(); rec.start(); return; }catch(_){}
-              break;
+              msg = 'Não ouvi fala. Vamos tentar novamente...';
+              setTimeout(() => {
+                if (voiceModal.classList.contains('active') && !isAgentSpeaking) {
+                  try { rec.stop(); rec.start(); } catch(_) {}
+                }
+              }, 100);
+              return;
             case 'audio-capture':
-              msg = 'Nenhum microfone detectado. Verifique o dispositivo de entrada de áudio no sistema.';
+              msg = 'Nenhum microfone detectado. Verifique os dispositivos do sistema.';
               break;
             case 'network':
-              msg = 'Falha de rede no serviço de voz do navegador. Tente novamente.';
+              msg = 'Falha de rede no serviço de voz. Tente novamente.';
               break;
+            case 'aborted':
+              return; // Ignora se foi parado manualmente
           }
           updateTranscription(msg);
         };
         rec.onend = () => {
           fabMic.classList.remove('listening');
           if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
+          console.log('[STT] Stopped.');
           const currentText = transcriptionText.textContent.replace(/\u00A0/g, ' ').trim();
           if (!currentText || currentText === 'Ouvindo...') {
             updateTranscription('');
           }
-          // Resume wake word listening if modal is closed
-          if (!voiceModal.classList.contains('active') && wakeWordRec) {
-            try { wakeWordRec.start(); } catch(e) {}
+          // Resume wake word listening only if modal is closed and AI is silent
+          if (!voiceModal.classList.contains('active') && wakeWordRec && !isAgentSpeaking) {
+            try { wakeWordRec.stop(); wakeWordRec.start(); } catch(e) {}
           }
         };
       } catch (err) {
@@ -118,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wakeWordRec = new SR();
         // ... (intermediate lines)
         wakeWordRec.onresult = (e) => {
+          if (isAgentSpeaking) return; // Não ativa wake-word se a IA estiver falando
           for (let i = e.resultIndex; i < e.results.length; ++i) {
             const transcript = e.results[i][0].transcript.toLowerCase();
             if (transcript.includes('olá agente') || transcript.includes('ola agente') || transcript.includes('olá gente')) {
@@ -177,16 +186,47 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    let isAgentSpeaking = false;
+    let currentAudio = null; // Global handle for interruption
+    let agentSpeakingTimeout = null;
+
+    function resetAgentSpeakingState() {
+      isAgentSpeaking = false;
+      if (currentAudio) {
+        try { currentAudio.pause(); currentAudio.src = ""; } catch(e) {}
+        currentAudio = null;
+      }
+      if (agentSpeakingTimeout) {
+        clearTimeout(agentSpeakingTimeout);
+        agentSpeakingTimeout = null;
+      }
+      if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
+      chatInput.disabled = false;
+      sendBtn.disabled = false;
+      console.log('[AI] Speaking state RESET.');
+    }
+
     async function callAgent(message) {
       const msg = (message || '').trim();
-      if (!msg) return;
+      if (!msg || isAgentSpeaking) return;
       
-      // Pause accessibility reader while AI is responding/speaking
-      if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
+      console.log('[AI] Processando mensagem:', msg);
+      isAgentSpeaking = true; 
+      
+      // Safety timeout: destrava após 30s se o áudio não terminar/play falhar
+      if (agentSpeakingTimeout) clearTimeout(agentSpeakingTimeout);
+      agentSpeakingTimeout = setTimeout(() => {
+        if (isAgentSpeaking) {
+          console.warn('[AI] Timeout de segurança atingido. Destravando.');
+          resetAgentSpeakingState();
+        }
+      }, 35000); // 35 segundos
 
+      if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
       updateTranscription('Processando sua dúvida...');
       chatInput.disabled = true;
       sendBtn.disabled = true;
+
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -195,53 +235,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (response.status === 401) {
-          updateTranscription('Sua sessão expirou ou você não está logado. Por favor, faça login novamente para conversar.');
-          if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
+          updateTranscription('Sessão expirada. Faça login novamente.');
+          resetAgentSpeakingState();
           return;
         }
 
+        const tRecv = performance.now();
         const data = await response.json();
+        const tParse = performance.now();
+        console.log(`[TIMER] Resposta JSON recebida e parseada em ${Math.round(tParse - tRecv)}ms.`);
 
         if (data.response) {
           updateTranscription(data.response);
-          if (data.audio_b64) {
-            const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
-            if (siriWave) { siriWave.classList.remove('idle'); siriWave.classList.add('active'); }
+          
+          try {
+            const streamUrl = `/api/audio/stream?id=${data.audio_id}&v=${Date.now()}`;
+            const audio = new Audio();
+            
+            audio.onplay = () => { 
+                const tPlay = performance.now();
+                console.log(`[TIMER] O áudio COMEÇOU a tocar ${Math.round(tPlay - tParse)}ms após o JSON.`);
+                isAgentSpeaking = true; 
+                currentAudio = audio;
+            };
+            
             audio.onended = () => {
-              if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
-              // Unpause when AI finishes speaking
+              console.log('[AI] Audio ended.');
+              if (currentAudio === audio) currentAudio = null;
+              resetAgentSpeakingState();
               if (window.AccessibilityService && !voiceModal.classList.contains('active')) {
                   window.AccessibilityService.setPaused(false);
               }
               if (voiceModal.classList.contains('active') && rec) {
-                try { rec.start(); } catch(e) {}
+                try { rec.stop(); rec.start(); } catch(e) {}
               }
             };
-            audio.play().catch(e => {
-              if (siriWave) { siriWave.classList.remove('active'); siriWave.classList.add('idle'); }
-              console.error("Erro ao reproduzir áudio:", e);
-              if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
-              if (voiceModal.classList.contains('active') && rec) {
-                try { rec.start(); } catch(err) {}
-              }
+            
+            // Atribui e toca IMEDIATAMENTE
+            audio.src = streamUrl;
+            if (siriWave) { siriWave.classList.remove('idle'); siriWave.classList.add('active'); }
+            
+            audio.play().catch(audioErr => {
+              console.warn("[AI] Play bloqueado ou erro no stream:", audioErr);
+              resetAgentSpeakingState();
             });
-          } else {
-            if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
-            if (voiceModal.classList.contains('active') && rec) {
-              try { rec.start(); } catch(err) {}
-            }
+            
+          } catch (audioErr) {
+            console.error("[AI] Erro ao preparar stream:", audioErr);
+            resetAgentSpeakingState();
           }
         } else {
-          if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
-          updateTranscription('Desculpe, tive um problema para responder. Tente novamente.');
+          resetAgentSpeakingState();
+          updateTranscription('Desculpe, tive um problema. Tente novamente.');
         }
       } catch (error) {
-        if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
-        updateTranscription('Erro de conexão. Verifique se o servidor está rodando.');
-      } finally {
-        chatInput.disabled = false;
-        sendBtn.disabled = false;
-        chatInput.focus();
+        console.error('[AI] Fetch error:', error);
+        resetAgentSpeakingState();
+        updateTranscription('Erro de conexão com o servidor.');
       }
     }
 
@@ -274,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    closeModal.addEventListener('click', () => {
+    closeModal.addEventListener('click', async () => {
       // Unpause accessibility reader
       if (window.AccessibilityService) window.AccessibilityService.setPaused(false);
 
@@ -284,6 +334,17 @@ document.addEventListener('DOMContentLoaded', () => {
       chatInput.value = '';
       if (rec) { try { rec.stop(); } catch(_) {} }
       if (wakeWordRec) { try { wakeWordRec.start(); } catch(_) {} }
+
+      // Interrompe qualquer áudio da IA imediatamente ao fechar o modal
+      resetAgentSpeakingState();
+
+      // Dispara automaticamente a atualização na janela de contexto (KB) ao fechar
+      console.log('[AI] Fechando modal e disparando atualização de contexto...');
+      try {
+        fetch('/api/chat/end', { method: 'POST' });
+      } catch(e) {
+        console.warn('[AI] Erro ao disparar fim de conversa', e);
+      }
     });
 
     async function handleSend() {

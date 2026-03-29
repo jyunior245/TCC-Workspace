@@ -26,10 +26,17 @@ class RAGService:
             import torch
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             print(f"⚙️ Dispositivo selecionado para embeddings: {device.upper()}", flush=True)
-            self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device=device)
-            print("✅ Modelo de embeddings carregado com sucesso na memória!", flush=True)
+            
+            model_name = 'sentence-transformers/all-MiniLM-L6-v2'
+            print(f"📥 Carregando modelo '{model_name}' (do cache ou baixando)...", flush=True)
+            self.model = SentenceTransformer(model_name, device=device)
+            print("✅ Modelo carregado na memória.", flush=True)
+            
+            print("🔥 Executando warmup do modelo na GPU para compilação (aguarde)...", flush=True)
+            self.model.encode("Warmup dummy text para inicializar o contexto CUDA.")
+            print("✅ Modelo de embeddings aquecido com sucesso!", flush=True)
         except Exception as e:
-            print(f"⚠️ Erro ao carregar modelo de embeddings: {e}", flush=True)
+            print(f"⚠️ Erro crítico ao carregar modelo de embeddings: {e}", flush=True)
             self.offline_mode = True
             self.model = None
 
