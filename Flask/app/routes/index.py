@@ -1,6 +1,10 @@
 from flask import Blueprint, flash, request, session, redirect, url_for, render_template, jsonify
 from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
+import threading
+from app.services.ai_service import HealthAgent
+
+agent = HealthAgent()
 
 index_bp = Blueprint('index', __name__)
 login_bp = Blueprint('login', __name__)
@@ -32,6 +36,15 @@ def login():
                     return redirect(url_for('register.complete_registration'))
 
                 if user_data.user_type == 'patient':
+                    # Dispara atualização da base de conhecimento (KB) em background para estar pronto no chat
+                    from flask import current_app
+                    app_obj = current_app._get_current_object()
+                    def update_kb():
+                        with app_obj.app_context():
+                            print(f"[LOGIN] Atualizando KB em background para o paciente {user_id}...")
+                            agent.update_patient_context(user_id)
+                    
+                    threading.Thread(target=update_kb, daemon=True).start()
                     return redirect(url_for('patient.dashboard'))
                 elif user_data.user_type == 'health_agent':
                     return redirect(url_for('agent.dashboard'))

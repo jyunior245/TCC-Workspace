@@ -26,19 +26,19 @@ class HealthAgent:
         print(f"\n[AI][DEBUG] === INÍCIO DO PROCESSAMENTO ===", flush=True)
         print(f"[AI][USER] Mensagem: '{message}'", flush=True)
 
-        # 1. CLASSIFICAÇÃO DE INTENÇÃO (COMENTADO PARA TESTE)
+        # 1. CLASSIFICAÇÃO DE INTENÇÃO
         start_step = time.time()
-        #intent = self._classify_intent(message)
-        intent = "HEALTH_QUERY"
-        # print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
+        intent = self._classify_intent(message)
+        print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
         
-        # 2. MEMÓRIA DE LONGO PRAZO
+        # 2. MEMÓRIA DE CURTO PRAZO (Reduzida para evitar redundância com a KB)
         start_step = time.time()
         last_chats = []
         if user_id:
-            recent_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(5).all()
+            # Reduzimos de 5 para 2 mensagens para economizar tokens e focar na Janela de Contexto (KB)
+            recent_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(2).all()
             last_chats = list(reversed(recent_chats))
-        print(f"[AI][TIME] 2. Busca de Memória: {time.time() - start_step:.2f}s", flush=True)
+        print(f"[AI][TIME] 2. Busca de Memória (Curto Prazo): {time.time() - start_step:.2f}s", flush=True)
 
         # 3. BUSCA RAG
         start_step = time.time()
@@ -191,23 +191,23 @@ Siga EXATAMENTE esta estrutura:
             print(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}")
         return None
 
-    # def _classify_intent(self, message):
-    #     """Usa o Llama para classificar o que o idoso quer (COMENTADO PARA TESTE)"""
-    #     classification_prompt = f"""
-    #     Classifique a intenção da mensagem do usuário em UMA ÚNICA PALAVRA:
-    #     - GREETING: Se for apenas um 'olá', 'bom dia', etc.
-    #     - HEALTH_QUERY: Se for uma dúvida comum de saúde ou sintomas leves.
-    #     - EMERGENCY: Se for um relato de dor aguda, falta de ar ou risco de vida.
-    #     - OTHER: Qualquer outro assunto.
-    #
-    #     Mensagem: "{message}"
-    #     Intenção:"""
-    #     
-    #     intent = self._call_llama(classification_prompt).strip().upper()
-    #     # Limpeza para garantir que venha apenas a palavra
-    #     for category in ["GREETING", "HEALTH_QUERY", "EMERGENCY"]:
-    #         if category in intent: return category
-    #     return "OTHER"
+    def _classify_intent(self, message):
+        """Usa o Llama para classificar o que o idoso quer"""
+        classification_prompt = f"""
+        Classifique a intenção da mensagem do usuário em UMA ÚNICA PALAVRA:
+        - GREETING: Se for apenas um 'olá', 'bom dia', 'oi', 'tudo bem?', etc.
+        - HEALTH_QUERY: Se for uma dúvida comum de saúde, sintomas leves ou relato de hábitos.
+        - EMERGENCY: Se for um relato de dor aguda, falta de ar ou risco de vida.
+        - OTHER: Qualquer outro assunto.
+        
+        Mensagem: "{message}"
+        Intenção:"""
+        
+        intent = self._call_llama(classification_prompt).strip().upper()
+        # Limpeza para garantir que venha apenas a palavra
+        for category in ["GREETING", "HEALTH_QUERY", "EMERGENCY"]:
+            if category in intent: return category
+        return "OTHER"
 
     def analyze_patient_triage(self, patient_history_text):
         """Analisa os relatórios do paciente e retorna JSON de prioridade (ALTA, MÉDIA, BAIXA) com justificativa."""
@@ -267,7 +267,7 @@ JSON gerado:
     def _build_chat_messages(self, message, intent, context, last_chats, sources=None, user_id=None):
         system_rules = "Você é um assistente de saúde empático para idosos."
 
-        # Injecao de Janela de Contexto (KB)
+        # Injeção de Janela de Contexto (KB) - Memória de Longo Prazo
         if user_id:
             try:
                 user_context = PatientContext.query.filter_by(patient_id=user_id).first()
@@ -277,15 +277,17 @@ JSON gerado:
                     if nome and nome != "null":
                         system_rules += f" O nome do paciente é {nome}."
                     
-                    system_rules += f"\n\nMEMÓRIA DO PACIENTE (Janela de Contexto):\n{json.dumps(kb_data, ensure_ascii=False)}\n"
-                    system_rules += "Use essa memória para dar respostas mais personalizadas, amigáveis e acompanhar o estado do paciente."
+                    # Formatação mais limpa para a KB
+                    kb_summary = json.dumps(kb_data, ensure_ascii=False, indent=2)
+                    system_rules += f"\n\nJANELA DE CONTEXTO (BASE DE CONHECIMENTO):\n{kb_summary}\n"
+                    system_rules += "Aja naturalmente. Use as informações da Janela de Contexto APENAS como conhecimento de fundo para não fazer perguntas repetitivas. NÃO relembre o histórico do paciente de forma proativa. Não diga coisas como 'lembrando que você tem...'. Use a memória de forma invisível."
             except Exception as e:
                 print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
 
         if intent == "EMERGENCY":
             system_rules += " ATENÇÃO: Possível emergência. Oriente o paciente a buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."
         elif intent == "GREETING":
-            system_rules += " Responda cordialmente a saudações e incentive o autocuidado."
+            system_rules += " ATENÇÃO: O usuário APENAS CUMPRIMENTOU ou fez uma saudação. VOCÊ DEVE APENAS RETRIBUIR O CUMPRIMENTO (ex: 'Olá! Como posso te ajudar hoje?') e PARE POR AÍ. VOCÊ ESTÁ TERMINANTEMENTE PROIBIDO de iniciar assuntos sobre saúde, exercícios, dieta ou histórico médico por conta própria."
 
         if intent in ("HEALTH_QUERY", "EMERGENCY"):
             rag_guidance = (
@@ -309,7 +311,11 @@ JSON gerado:
         if context:
             system_content += f"\nCONTEXTO-BASE (Protocolos do SUS):\n{context}\n"
         
-        system_content += "\nResponda diretamente ao paciente em 2-5 frases, mantendo a continuidade do assunto se for uma pergunta de seguimento."
+        system_content += "\nDIRETRIZES DE RESPOSTA OBRIGATÓRIAS:\n"
+        system_content += "- Seja EXTREMAMENTE conciso e vá direto ao ponto.\n"
+        system_content += "- Espelhe o tamanho da mensagem do usuário. Se o usuário disser apenas 'oi', 'olá', 'tudo bem?', responda APENAS com um cumprimento curto (ex: 'Olá! Como posso te ajudar hoje?')"
+        system_content += "- NÃO inicie assuntos médicos por conta própria.\n"
+        system_content += "- Só dê conselhos de saúde se o paciente perguntar ativamente sobre algo."
 
         # O Histórico é passado como mensagens distintas (não concatenado)
         messages = [{"role": "system", "content": system_content.strip()}]
