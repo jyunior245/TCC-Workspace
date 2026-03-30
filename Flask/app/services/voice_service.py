@@ -1,10 +1,10 @@
-
 import speech_recognition as sr
 import edge_tts
 import asyncio
 import pygame
 import os
 import tempfile
+import re
 
 class VoiceService:
     def __init__(self, init_pygame=True):
@@ -63,12 +63,24 @@ class VoiceService:
         if not cleaned:
             return
             
-        communicate = edge_tts.Communicate(cleaned, self.voice)
-        async for chunk in communicate.stream():
-            if chunk.get("type") == "audio":
-                data = chunk.get("data")
-                if data:
-                    yield data
+        # Divide o texto em frases para evitar o problema do áudio sendo cortado precocemente em textos mais longos.
+        sentences = re.split(r'(?<=[.!?])\s+', cleaned)
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+                
+            try:
+                communicate = edge_tts.Communicate(sentence, self.voice)
+                async for chunk in communicate.stream():
+                    if chunk.get("type") == "audio":
+                        data = chunk.get("data")
+                        if data:
+                            yield data
+            except Exception as e:
+                print(f"[VOICE] Erro ao gerar áudio para a frase '{sentence[:20]}...': {e}")
+                continue # Tenta continuar com o restante das frases
 
     def generate_base64_audio(self, text):
         """Transforma texto em áudio natural e retorna em base64."""

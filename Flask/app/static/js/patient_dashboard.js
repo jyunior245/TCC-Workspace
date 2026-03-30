@@ -213,14 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('[AI] Processando mensagem:', msg);
       isAgentSpeaking = true; 
       
-      // Safety timeout: destrava após 30s se o áudio não terminar/play falhar
+      // Safety timeout inicial: destrava após 45s se a requisição travar ou o áudio não começar
       if (agentSpeakingTimeout) clearTimeout(agentSpeakingTimeout);
       agentSpeakingTimeout = setTimeout(() => {
         if (isAgentSpeaking) {
-          console.warn('[AI] Timeout de segurança atingido. Destravando.');
+          console.warn('[AI] Timeout de segurança atingido aguardando servidor. Destravando.');
           resetAgentSpeakingState();
         }
-      }, 35000); // 35 segundos
+      }, 45000); // 45 segundos para aguardar a respost do LLM
 
       if (window.AccessibilityService) window.AccessibilityService.setPaused(true);
       updateTranscription('Processando sua dúvida...');
@@ -257,8 +257,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[TIMER] O áudio COMEÇOU a tocar ${Math.round(tPlay - tParse)}ms após o JSON.`);
                 isAgentSpeaking = true; 
                 currentAudio = audio;
+                
+                // Remove o timeout letal assim que o áudio começar.
+                // Agora o tempo de reprodução é infinito, encerrando apenas quando a fala terminar naturalmente (onended) ou caso ocorra um erro de conexão (onerror).
+                if (agentSpeakingTimeout) clearTimeout(agentSpeakingTimeout);
+                agentSpeakingTimeout = null;
             };
             
+            audio.onerror = () => {
+                console.warn('[AI] Streaming de áudio interrompido ou falhou na rede.');
+                resetAgentSpeakingState();
+            };
+
             audio.onended = () => {
               console.log('[AI] Audio ended.');
               if (currentAudio === audio) currentAudio = null;

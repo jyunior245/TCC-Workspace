@@ -203,7 +203,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/patient_dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/patient_dashboard.js') }}?v=3"></script>
 <script>
 function confirmDeleteAccount() {
     if (!confirm("Esta ação é irreversível. Todos os seus dados, histórico de saúde e acesso serão apagados permanentemente de nossa base e do Google. Continuar?")) {
