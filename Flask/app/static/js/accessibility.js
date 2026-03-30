@@ -204,6 +204,20 @@ const AccessibilityService = (() => {
                 if (icon) icon.textContent = 'volume_off';
             }
         });
+
+        // Update the Settings Modal status button if it exists
+        const statusBtn = document.getElementById('accessibilityStatusBtn');
+        if (statusBtn) {
+            if (isEnabled) {
+                statusBtn.textContent = 'ON';
+                statusBtn.classList.add('active');
+                statusBtn.classList.remove('inactive');
+            } else {
+                statusBtn.textContent = 'OFF';
+                statusBtn.classList.remove('active');
+                statusBtn.classList.add('inactive');
+            }
+        }
     }
 
     const service = {

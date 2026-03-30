@@ -42,13 +42,33 @@ document.addEventListener('DOMContentLoaded', () => {
       transcriptionText.innerHTML = '';
       
       const words = text.split(' ');
-      words.forEach((word, index) => {
-        const span = document.createElement('span');
-        // Adiciona um espaço após a palavra, preservando múltiplos espaços originais se houver, ou apenas um espaço normal
-        span.innerHTML = word + '&nbsp;';
-        // Atraso progressivo maior: 0.08s por palavra para uma entrada mais calma e gradual
-        span.style.animationDelay = `${index * 0.08}s`;
-        transcriptionText.appendChild(span);
+      const displayContainer = document.getElementById('transcriptionDisplay');
+      
+      // Divide o texto em blocos/frases para que subam de baixo para cima, evitando a digitação horizontal palavra-por-palavra
+      const phrases = text.match(/[^.?!,;]+[.?!,;]*/g) || [text];
+      
+      let accumulatedChars = 0;
+      
+      phrases.forEach((phrase) => {
+        if (!phrase.trim()) return;
+        
+        const div = document.createElement('div');
+        div.className = 'sentence-block';
+        div.innerHTML = phrase.trim() + '&nbsp;';
+        
+        // Atraso baseado nos caracteres (aproximadamente 0.075s por letra) para ser bem mais lento e cadenciado com a voz real
+        div.style.animationDelay = `${accumulatedChars * 0.075}s`;
+        
+        div.addEventListener('animationstart', () => {
+          // Só rola se o conteúdo total já estiver saindo dos limites do container
+          if (displayContainer.scrollHeight > displayContainer.clientHeight) {
+            div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+        
+        transcriptionText.appendChild(div);
+        
+        accumulatedChars += phrase.length;
       });
     }
 
@@ -138,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Programmatically open the modal and start the active listener
                 voiceModal.classList.add('active');
-                // ...
                 voiceModal.setAttribute('aria-hidden', 'false');
                 updateTranscription('');
                 if (rec) {

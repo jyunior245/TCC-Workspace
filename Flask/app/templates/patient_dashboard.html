@@ -3,7 +3,7 @@
 {% block title %}Paciente{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/patient.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/patient.css') }}?v=8">
 {% endblock %}
 
 {% block content %}
@@ -32,13 +32,13 @@
 
     </nav>
     <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px; padding: 16px;">
+      <button class="nav-btn" onclick="openSettingsModal()" style="width: 100%; justify-content: flex-start;">
+        <span class="material-icons-outlined">settings</span>
+        <span>Configurações</span>
+      </button>
       <button class="nav-btn logout" onclick="window.location.href='/logout'" style="width: 100%; justify-content: flex-start;">
         <span class="material-icons-outlined">logout</span>
         <span>Sair</span>
-      </button>
-      <button class="nav-btn delete-account" onclick="confirmDeleteAccount()" style="width: 100%; justify-content: flex-start; color: var(--md-sys-color-error); --md-sys-color-primary: var(--md-sys-color-error);">
-        <span class="material-icons-outlined">delete_forever</span>
-        <span>Deletar Conta</span>
       </button>
     </div>
   </aside>
@@ -198,6 +198,73 @@
       </section>
     </main>
   </div>
+
+  <!-- Bottom Navigation for Mobile -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-target="tab-ai">
+      <span class="material-icons-outlined">record_voice_over</span>
+      <span>Assistente</span>
+    </button>
+    <button class="nav-item" data-target="tab-schedule">
+      <span class="material-icons-outlined">event</span>
+      <span>Agenda</span>
+    </button>
+    <button class="nav-item" data-target="tab-reports">
+      <span class="material-icons-outlined">insert_chart</span>
+      <span>Relatórios</span>
+    </button>
+    <button class="nav-item" onclick="openSettingsModal()">
+      <span class="material-icons-outlined">settings</span>
+      <span>Ajustes</span>
+    </button>
+    <button class="nav-item logout" onclick="window.location.href='/logout'">
+      <span class="material-icons-outlined">logout</span>
+      <span>Sair</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Modal de Configurações -->
+<div class="settings-overlay" id="settingsModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Configurações do Sistema">
+  <div class="settings-card">
+    <div class="settings-header">
+      <h2 class="title-large" style="margin: 0; font-weight: 500;">Configurações</h2>
+      <button class="icon-button modal-close" onclick="closeSettingsModal()" aria-label="Fechar configurações">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
+    <div class="settings-content">
+      <div class="settings-section">
+        <h3 class="title-medium" style="color: var(--md-sys-color-primary); margin-bottom: 16px;">Geral</h3>
+        
+        <div class="settings-item">
+          <div class="settings-info">
+            <span class="material-icons-outlined">accessibility_new</span>
+            <div>
+              <p class="body-large" style="margin: 0;">Acessibilidade</p>
+              <p class="body-medium" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">Leitura de tela guiada</p>
+            </div>
+          </div>
+          <button class="btn btn-status-toggle" id="accessibilityStatusBtn" onclick="AccessibilityService.toggle()">OFF</button>
+        </div>
+      </div>
+      
+      <div class="settings-section" style="margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 24px;">
+        <h3 class="title-medium" style="color: var(--md-sys-color-error); margin-bottom: 16px;">Zona de Perigo</h3>
+        
+        <div class="settings-item danger-zone" onclick="confirmDeleteAccount()">
+          <div class="settings-info" style="color: var(--md-sys-color-error);">
+            <span class="material-icons-outlined">delete_forever</span>
+            <div>
+              <p class="body-large" style="margin: 0; font-weight: 500;">Deletar Conta</p>
+              <p class="body-medium" style="margin: 0; opacity: 0.8;">Apagar permanentemente todos os dados</p>
+            </div>
+          </div>
+          <span class="material-icons-outlined" style="color: var(--md-sys-color-error);">chevron_right</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -205,6 +272,23 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/patient_dashboard.js') }}?v=3"></script>
 <script>
+function openSettingsModal() {
+    document.getElementById('settingsModal').classList.add('active');
+    document.getElementById('settingsModal').setAttribute('aria-hidden', 'false');
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('active');
+    document.getElementById('settingsModal').setAttribute('aria-hidden', 'true');
+}
+
+// Fechar modal ao clicar na película preta externa (overlay)
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeSettingsModal();
+    }
+});
+
 function confirmDeleteAccount() {
     if (!confirm("Esta ação é irreversível. Todos os seus dados, histórico de saúde e acesso serão apagados permanentemente de nossa base e do Google. Continuar?")) {
         return;
