@@ -1,3 +1,4 @@
+from app.extensions import db
 from flask import Blueprint, request, jsonify, session, render_template, Response, stream_with_context
 from app.services.ai_service import HealthAgent
 from app.services.voice_service import VoiceService
@@ -31,7 +32,7 @@ def chat():
     
     # 5. DISPARA PRÉ-AQUECIMENTO DO ÁUDIO (Background Thread)
     audio_id = str(uuid.uuid4())
-    audio_q = queue.Queue(maxsize=20)
+    audio_q = queue.Queue() # REMOVIDO maxsize para evitar bloqueio da thread assíncrona
     
     def producer_worker():
         loop = asyncio.new_event_loop()
@@ -103,7 +104,7 @@ def stream_audio():
         else:
             # Fallback (caso o pre-warm falhe ou não tenha sido acionado)
             print(f"[AUDIO][WARNING] Pre-warm não encontrado para {audio_id}, gerando agora...", flush=True)
-            q_fallback = queue.Queue(maxsize=10)
+            q_fallback = queue.Queue() # REMOVIDO maxsize para não quebrar WebSocket
             def fallback_producer():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -187,4 +188,4 @@ def end_chat():
     thread.start()
     
     return jsonify({'status': 'success', 'message': 'Contexto do paciente está sendo processado.'})
-    return jsonify({'status': 'success', 'message': 'Contexto do paciente está sendo processado.'})
+

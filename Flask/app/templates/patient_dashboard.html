@@ -21,10 +21,7 @@
         <span class="material-icons-outlined">record_voice_over</span>
         <span>Assistente</span>
       </button>
-      <button class="nav-btn" data-target="tab-schedule">
-        <span class="material-icons-outlined">event</span>
-        <span>Agenda</span>
-      </button>
+
       <button class="nav-btn" data-target="tab-reports">
         <span class="material-icons-outlined">insert_chart</span>
         <span>Relatórios</span>
@@ -112,56 +109,7 @@
           </div>
         </div>
 
-        <!-- Schedule Tab -->
-        <div class="tab-panel" id="tab-schedule" role="tabpanel" aria-labelledby="nav-schedule" aria-hidden="true">
-          <div class="schedule-view">
-            <div class="schedule-header">
-              <h2 class="headline-small">Sua Agenda</h2>
-              <div class="tabs-inline" role="tablist" aria-label="Filtro de período">
-                <button class="chip filter-chip active" data-view="month" aria-selected="true">Mês</button>
-                <button class="chip filter-chip" data-view="week" aria-selected="false">Semana</button>
-              </div>
-            </div>
 
-            <div class="schedule-grid">
-              <div class="calendar-card">
-                <div class="calendar" id="calendar" aria-label="Calendário">
-                  <div class="calendar-grid header">
-                    <div>Dom</div>
-                    <div>Seg</div>
-                    <div>Ter</div>
-                    <div>Qua</div>
-                    <div>Qui</div>
-                    <div>Sex</div>
-                    <div>Sáb</div>
-                  </div>
-                  <div class="calendar-grid body" id="calendarGrid"></div>
-                </div>
-              </div>
-
-              <div class="events-card">
-                <div class="events-section">
-                  <div class="section-title title-medium">Próximos eventos</div>
-
-                  <div class="list-state" id="eventsLoading">
-                    <div class="card shimmer"></div>
-                    <div class="card shimmer"></div>
-                  </div>
-
-                  <div class="list-state hidden" id="eventsEmpty">
-                    <div class="empty body-large">Nenhum evento agendado</div>
-                  </div>
-
-                  <div class="cards" id="eventsList" aria-live="polite"></div>
-                </div>
-              </div>
-            </div>
-
-            <button class="fab-add" id="fabAddEvent" aria-label="Adicionar agendamento">
-              <span class="material-icons-outlined">add</span>
-            </button>
-          </div>
-        </div>
 
         <!-- Reports Tab -->
         <div class="tab-panel" id="tab-reports" role="tabpanel" aria-labelledby="nav-reports" aria-hidden="true">
@@ -205,10 +153,7 @@
       <span class="material-icons-outlined">record_voice_over</span>
       <span>Assistente</span>
     </button>
-    <button class="nav-item" data-target="tab-schedule">
-      <span class="material-icons-outlined">event</span>
-      <span>Agenda</span>
-    </button>
+
     <button class="nav-item" data-target="tab-reports">
       <span class="material-icons-outlined">insert_chart</span>
       <span>Relatórios</span>
@@ -248,6 +193,9 @@
           <button class="btn btn-status-toggle" id="accessibilityStatusBtn" onclick="AccessibilityService.toggle()">OFF</button>
         </div>
       </div>
+
+
+
       
       <div class="settings-section" style="margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 24px;">
         <h3 class="title-medium" style="color: var(--md-sys-color-error); margin-bottom: 16px;">Zona de Perigo</h3>
@@ -270,6 +218,7 @@
 {% endblock %}
 
 {% block scripts %}
+
 <script src="{{ url_for('static', filename='js/patient_dashboard.js') }}?v=3"></script>
 <script>
 function openSettingsModal() {

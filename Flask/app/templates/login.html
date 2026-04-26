@@ -53,6 +53,7 @@
                 Entrar
             </button>
 
+
             <div class="auth-divider">ou</div>
 
             <a href="{{ url_for('auth_google.login') }}" class="md-button google-btn">
@@ -126,6 +127,7 @@
 
 {% block scripts %}
 {{ super() }}
+
 <script src="{{ url_for('static', filename='js/registration_bot.js') }}"></script>
 <script src="{{ url_for('static', filename='js/voice_nav.js') }}"></script>
 {% endblock %}

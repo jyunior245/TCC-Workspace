@@ -9,6 +9,7 @@ from app.models.daily_report import DailyReport
 from app.models.patient import Patient
 from app.models.patient_context import PatientContext
 from app.extensions.sql_alchemy import db
+from datetime import timedelta
 
 class HealthAgent:
     def __init__(self):
@@ -29,6 +30,7 @@ class HealthAgent:
         # 1. CLASSIFICAÇÃO DE INTENÇÃO
         start_step = time.time()
         intent = self._classify_intent(message)
+            
         print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
         
         # 2. MEMÓRIA DE CURTO PRAZO (Reduzida para evitar redundância com a KB)
@@ -44,11 +46,19 @@ class HealthAgent:
         start_step = time.time()
         context_sus = ""
         sources = []
-        if intent in ["HEALTH_QUERY", "EMERGENCY"]:
+        
+        # Ativa RAG se for Saúde/Emergência OU se houver menção direta a protocolos OU se houver sintomas claros
+        symptoms_keywords = ["dor", "febre", "quente", "nariz", "tosse", "gripe", "mal", "sintoma", "remédio", "medicação"]
+        is_health_query = intent in ["HEALTH_QUERY", "EMERGENCY"] or \
+                          any(word in message.lower() for word in ["sus", "protocolo", "manual", "diretriz"]) or \
+                          any(word in message.lower() for word in symptoms_keywords)
+        
+        if is_health_query:
             try:
-                context_sus, sources = rag_service.query_protocols_with_sources(message)
+                context_sus, sources = rag_service.query_protocols_with_sources(message, n_results=1)
             except Exception as e:
                 print(f"[AI][ERROR] Falha no RAG: {e}")
+        
         rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
         print(f"[AI][TIME] 3. Busca RAG (Embeddings): {time.time() - start_step:.2f}s", flush=True)
         
@@ -70,6 +80,8 @@ class HealthAgent:
             db.session.add(new_chat)
             db.session.commit()
         print(f"[AI][TIME] 6. Persistência DB: {time.time() - start_step:.2f}s", flush=True)
+        
+        print(f"[AI][RESPONSE] {response}", flush=True)
         
         print(f"[AI][DEBUG] === FIM DO PROCESSAMENTO ({time.time() - start_total:.2f}s total) ===\n", flush=True)
         return response
@@ -192,21 +204,62 @@ Siga EXATAMENTE esta estrutura:
         return None
 
     def _classify_intent(self, message):
-        """Usa o Llama para classificar o que o idoso quer"""
-        classification_prompt = f"""
-        Classifique a intenção da mensagem do usuário em UMA ÚNICA PALAVRA:
-        - GREETING: Se for apenas um 'olá', 'bom dia', 'oi', 'tudo bem?', etc.
-        - HEALTH_QUERY: Se for uma dúvida comum de saúde, sintomas leves ou relato de hábitos.
-        - EMERGENCY: Se for um relato de dor aguda, falta de ar ou risco de vida.
-        - OTHER: Qualquer outro assunto.
+        """Classificação de intenção via Heurística ultra-rápida, sem chamada LLM cara"""
+        import unicodedata
         
-        Mensagem: "{message}"
-        Intenção:"""
+        msg_lower = message.lower().strip()
+        # Remove acentos para facilitar a busca (ex: "ânsia" -> "ansia")
+        msg_unaccented = unicodedata.normalize('NFKD', msg_lower).encode('ascii', 'ignore').decode('utf-8')
         
-        intent = self._call_llama(classification_prompt).strip().upper()
-        # Limpeza para garantir que venha apenas a palavra
-        for category in ["GREETING", "HEALTH_QUERY", "EMERGENCY"]:
-            if category in intent: return category
+        # 1. FAST-PATH: Saudações comuns
+        greetings = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'tudo bom']
+        if any(g in msg_lower for g in greetings) and len(msg_lower) < 25:
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: GREETING", flush=True)
+            return "GREETING"
+
+        # 2. Emergências
+        emergencies = ['dor forte', 'dor aguda', 'falta de ar', 'infarto', 'socorro', 'urgente', 'morrendo', 'samu', 'ambulancia']
+        if any(e in msg_unaccented for e in emergencies):
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: EMERGENCY", flush=True)
+            return "EMERGENCY"
+
+        # 3. Consultas de Saúde, Doenças e Sintomas (Stems expandidos)
+        health_stems = [
+            "dor", "febr", "quent", "nariz", "toss", "grip", "sintom", "remedi", "medic",
+            "sus", "protocol", "diretriz", "pressao", "ferid", "inflama", "diarrei", "vomit",
+            "doen", "receit", "sangue", "exame", "coracao", "alopecia", "cabel", "pele",
+            "olho", "ouvid", "gargant", "osso", "muscul", "respir", "tont", "desmai",
+            "enjo", "ansia", "defeca", "urin", "fez", "sangrament", "machuc", "queimadur",
+            "picad", "alergi", "coceir", "manch", "vermelh", "inchac", "dormenci", "formigament",
+            "fraquez", "cansac", "fadig", "emagreci", "obes", "colesterol", "diabet",
+            "hipertensao", "cancer", "tumor", "cirurgi", "tratament", "curativ", "terapi",
+            "psicolog", "psiquiatr", "depressa", "ansiedad", "estress", "insoni", "sono",
+            "nutri", "alimenta", "diet", "vitamin", "suplement", "vacin", "imuniza",
+            "covid", "dengu", "zika", "chikunguny", "malari", "tuberculos", "hiv", "aids",
+            "sifili", "gonorrei", "herpes", "hpv", "peso", "gordura", "pressao", "bpm",
+            "batimento", "corativo", "pos-operatorio", "gravidez", "gestacao", "parto",
+            "aborto", "menstruacao", "menopausa", "andropausa", "prostata", "mama", "utero",
+            "ovario", "testiculo", "penis", "vagina", "dst", "ist", "infeccao", "bacteri",
+            "virus", "fungo", "parasit", "verm", "lombriga", "carrapato", "piolho", "pulga",
+            "sarna", "micos", "caspa", "seborreia", "espinha", "acne", "cravo", "ruga",
+            "cicatriz", "queloid", "umbigo", "unha", "calvicie", "careca", "pelada", "aguada", "esverdeada"
+        ]
+        
+        # Palavras exatas
+        exact_words = ["mal", "sus"]
+        
+        # Checa raízes
+        if any(stem in msg_unaccented for stem in health_stems):
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: HEALTH_QUERY", flush=True)
+            return "HEALTH_QUERY"
+            
+        # Checa palavras exatas com split
+        words = msg_unaccented.split()
+        if any(w in words for w in exact_words):
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: HEALTH_QUERY", flush=True)
+            return "HEALTH_QUERY"
+            
+        print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: OTHER", flush=True)
         return "OTHER"
 
     def analyze_patient_triage(self, patient_history_text):
@@ -274,13 +327,16 @@ JSON gerado:
                 if user_context and user_context.context_data:
                     kb_data = user_context.context_data
                     nome = kb_data.get("nome_do_paciente")
-                    if nome and nome != "null":
-                        system_rules += f" O nome do paciente é {nome}."
+                    sint = kb_data.get("sintomas_relatados", [])
+                    meds = kb_data.get("medicacoes_relatadas", [])
                     
-                    # Formatação mais limpa para a KB
-                    kb_summary = json.dumps(kb_data, ensure_ascii=False, indent=2)
-                    system_rules += f"\n\nJANELA DE CONTEXTO (BASE DE CONHECIMENTO):\n{kb_summary}\n"
-                    system_rules += "Aja naturalmente. Use as informações da Janela de Contexto APENAS como conhecimento de fundo para não fazer perguntas repetitivas. NÃO relembre o histórico do paciente de forma proativa. Não diga coisas como 'lembrando que você tem...'. Use a memória de forma invisível."
+                    bg_info = ""
+                    if nome and nome != "null": bg_info += f"Paciente: {nome}. "
+                    if sint and isinstance(sint, list): bg_info += f"Sintomas BD: {', '.join(sint)}. "
+                    if meds and isinstance(meds, list): bg_info += f"Medicamentos BD: {', '.join(meds)}. "
+                    
+                    if bg_info:
+                        system_rules += f" [{bg_info}]"
             except Exception as e:
                 print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
 
@@ -305,17 +361,12 @@ JSON gerado:
         fontes_instruction = ""
         if sources:
             fontes_str = ", ".join(sources)
-            fontes_instruction = f'Ao final da resposta, inclua a linha: "Fontes: {fontes_str}"\n'
+            fontes_instruction = f'- Cite a fonte ao final: "Fontes: {fontes_str}"\n'
 
-        system_content = f"{system_rules}\n\n{rag_guidance}\n\n{fontes_instruction}"
+        system_content = f"{system_rules}\n{rag_guidance}\n{fontes_instruction}"
         if context:
-            system_content += f"\nCONTEXTO-BASE (Protocolos do SUS):\n{context}\n"
-        
-        system_content += "\nDIRETRIZES DE RESPOSTA OBRIGATÓRIAS:\n"
-        system_content += "- Seja EXTREMAMENTE conciso e vá direto ao ponto.\n"
-        system_content += "- Espelhe o tamanho da mensagem do usuário. Se o usuário disser apenas 'oi', 'olá', 'tudo bem?', responda APENAS com um cumprimento curto (ex: 'Olá! Como posso te ajudar hoje?')"
-        system_content += "- NÃO inicie assuntos médicos por conta própria.\n"
-        system_content += "- Só dê conselhos de saúde se o paciente perguntar ativamente sobre algo."
+            system_content += f"\n[PROTOCOLOS SUS]: {context[:1200]}\n"
+        system_content += "\nREGRAS DE RESPOSTA:\n- SEJA EXTREMAMENTE BREVE E CONCISO.\n- Sua resposta deve ter obrigatoriamente no máximo 2 a 3 frases curtas.\n- Vá direto ao ponto e entregue apenas o mais essencial.\n- Não faça longas explicações."
 
         # O Histórico é passado como mensagens distintas (não concatenado)
         messages = [{"role": "system", "content": system_content.strip()}]
@@ -342,10 +393,21 @@ JSON gerado:
         except:
             return "O serviço de análise médica profunda está offline no momento."
 
-    def _call_llama(self, prompt):
-        payload = {"model": self.llama_model, "prompt": prompt, "stream": False}
+    def _call_llama(self, prompt, num_predict=None, temperature=None):
+        payload = {
+            "model": self.llama_model, 
+            "prompt": prompt, 
+            "stream": False,
+            "keep_alive": "15m" # Mantém o modelo na memória por 15 min
+        }
+        
+        # Adiciona opções de performance
+        options = {}
+        if num_predict: options["num_predict"] = num_predict
+        if temperature is not None: options["temperature"] = temperature
+        if options: payload["options"] = options
+
         try:
-            # Aumentado o timeout para 90s por segurança, embora o llama3.2 deva responder em <5s
             res = requests.post(self.ollama_url, json=payload, timeout=90)
             return res.json().get("response", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
@@ -354,10 +416,21 @@ JSON gerado:
 
     def _call_llama_chat(self, messages):
         chat_url = self.ollama_url.replace('/api/generate', '/api/chat')
-        payload = {"model": self.llama_model, "messages": messages, "stream": False}
+        payload = {
+            "model": self.llama_model, 
+            "messages": messages, 
+            "stream": False,
+            "keep_alive": "15m",
+            "options": {
+                "temperature": 0.3,
+                "num_predict": 250 # Limite afrouxado; a brevidade será controlada cognitivamente pelo modelo.
+            }
+        }
         try:
             res = requests.post(chat_url, json=payload, timeout=90)
             return res.json().get("message", {}).get("content", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
             print(f"Erro no Llama Chat: {e}")
-            return "Erro de conexão com o Llama 3.2:3b (Ollama). Verifique se ele está rodando."
+            return "Erro de conexão com o Llama 3.2 (Ollama). Verifique se ele está rodando."
+
+

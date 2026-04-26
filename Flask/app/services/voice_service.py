@@ -58,29 +58,25 @@ class VoiceService:
         await communicate.save(output_file)
 
     async def stream_audio_generator(self, text):
-        """Gera o áudio em chunks (streaming) para o Flask."""
+        """Gera o áudio em chunks (streaming) contínuo para o Flask."""
         cleaned = self._sanitize_text(text)
         if not cleaned:
             return
             
-        # Divide o texto em frases para evitar o problema do áudio sendo cortado precocemente em textos mais longos.
-        sentences = re.split(r'(?<=[.!?])\s+', cleaned)
+        # Remove caracteres Markdown que o robô tentaria pronunciar como "asterisco"
+        cleaned = re.sub(r'[*_#]+', '', cleaned)
         
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-                
-            try:
-                communicate = edge_tts.Communicate(sentence, self.voice)
-                async for chunk in communicate.stream():
-                    if chunk.get("type") == "audio":
-                        data = chunk.get("data")
-                        if data:
-                            yield data
-            except Exception as e:
-                print(f"[VOICE] Erro ao gerar áudio para a frase '{sentence[:20]}...': {e}")
-                continue # Tenta continuar com o restante das frases
+        try:
+            # Geração unificada e limpa. Como a fila no backend não tem mais limites (maxsize),
+            # o edge-tts transmitirá suavemente sem dar timeout na conexão WebSocket.
+            communicate = edge_tts.Communicate(cleaned, self.voice)
+            async for chunk in communicate.stream():
+                if chunk.get("type") == "audio":
+                    data = chunk.get("data")
+                    if data:
+                        yield data
+        except Exception as e:
+            print(f"[VOICE] Erro ao gerar a stream de áudio contínua: {e}")
 
     def generate_base64_audio(self, text):
         """Transforma texto em áudio natural e retorna em base64."""

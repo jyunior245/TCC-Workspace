@@ -411,32 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const calendarGrid = document.getElementById('calendarGrid');
-  if (calendarGrid) {
-    renderMonthGrid(calendarGrid, new Date());
-  }
 
-  const filterChips = document.querySelectorAll('.filter-chip');
-  filterChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      filterChips.forEach(c => {
-        c.classList.remove('active');
-        c.setAttribute('aria-selected', 'false');
-      });
-      chip.classList.add('active');
-      chip.setAttribute('aria-selected', 'true');
-    });
-  });
-
-  setTimeout(() => {
-    const loading = document.getElementById('eventsLoading');
-    const empty = document.getElementById('eventsEmpty');
-    const list = document.getElementById('eventsList');
-    if (loading && empty && list) {
-      loading.classList.add('hidden');
-      empty.classList.remove('hidden');
-    }
-  }, 900);
 
   setTimeout(() => {
     const rl = document.getElementById('reportsLoading');
@@ -463,41 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1100);
 });
 
-function renderMonthGrid(container, date) {
-  container.innerHTML = '';
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const first = new Date(year, month, 1);
-  const startDay = first.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const prevDays = new Date(year, month, 0).getDate();
-  const totalCells = 35;
-  let day = 1;
-  for (let i = 0; i < totalCells; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'day';
-    const num = document.createElement('div');
-    num.className = 'num';
-    if (i < startDay) {
-      const n = prevDays - startDay + i + 1;
-      num.textContent = n;
-      cell.classList.add('outside');
-    } else if (day <= daysInMonth) {
-      num.textContent = day;
-      if (Math.random() < 0.2) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        cell.appendChild(dot);
-      }
-      day++;
-    } else {
-      num.textContent = i - startDay - daysInMonth + 1;
-      cell.classList.add('outside');
-    }
-    cell.appendChild(num);
-    container.appendChild(cell);
-  }
-}
+
 
 function cardReport(c) {
   return `<div class="card report-card" tabindex="0" role="article" aria-label="${c.title}">

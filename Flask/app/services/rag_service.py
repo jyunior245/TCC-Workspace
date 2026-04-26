@@ -35,6 +35,9 @@ class RAGService:
             print("🔥 Executando warmup do modelo na GPU para compilação (aguarde)...", flush=True)
             self.model.encode("Warmup dummy text para inicializar o contexto CUDA.")
             print("✅ Modelo de embeddings aquecido com sucesso!", flush=True)
+            
+            # Carrega os protocolos se o banco estiver vazio
+            self.load_pdf_protocols()
         except Exception as e:
             print(f"⚠️ Erro crítico ao carregar modelo de embeddings: {e}", flush=True)
             self.offline_mode = True

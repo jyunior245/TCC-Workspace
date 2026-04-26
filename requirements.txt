@@ -26,4 +26,4 @@ WeasyPrint
 Flask-WeasyPrint
 firebase-admin
 authLib
-logger 
+logger
