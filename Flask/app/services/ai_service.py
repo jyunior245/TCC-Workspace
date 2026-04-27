@@ -204,26 +204,95 @@ Siga EXATAMENTE esta estrutura:
         return None
 
     def _classify_intent(self, message):
-        """Classificação de intenção via Heurística ultra-rápida, sem chamada LLM cara"""
+        """Classificação de intenção via Similaridade de Embeddings + Fallback Heurístico (Sub-segundo)"""
         import unicodedata
+        import numpy as np
         
         msg_lower = message.lower().strip()
-        # Remove acentos para facilitar a busca (ex: "ânsia" -> "ansia")
-        msg_unaccented = unicodedata.normalize('NFKD', msg_lower).encode('ascii', 'ignore').decode('utf-8')
         
-        # 1. FAST-PATH: Saudações comuns
+        # 1. FAST-PATH: Saudações comuns curtas (economia máxima de processamento)
         greetings = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'tudo bom']
         if any(g in msg_lower for g in greetings) and len(msg_lower) < 25:
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: GREETING", flush=True)
+            print(f"[AI][DEBUG] Intent classificada via FAST-PATH: GREETING", flush=True)
             return "GREETING"
 
-        # 2. Emergências
+        # 2. CLASSIFICAÇÃO VIA EMBEDDINGS (Muito Rápida, baseada em vetores pré-calculados)
+        if hasattr(rag_service, 'model') and rag_service.model is not None:
+            try:
+                # Exemplos semânticos para cada categoria
+                intent_examples = {
+                    "EMERGENCY": [
+                        "estou com uma dor muito forte no peito",
+                        "estou sentindo uma dor aguda insuportável",
+                        "não consigo respirar, falta de ar severa",
+                        "acho que estou infartando, socorro",
+                        "chame a ambulância, caso urgente",
+                        "estou morrendo de dor"
+                    ],
+                    "HEALTH_QUERY": [
+                        "como eu tomo esse remédio?",
+                        "quais os sintomas da dengue?",
+                        "como fazer curativo em ferida?",
+                        "onde encontro o protocolo do SUS?",
+                        "o que é bom para dor de cabeça?",
+                        "estou com febre e tosse",
+                        "marcar consulta médica para exame",
+                        "falar sobre tratamento para diabetes",
+                        "estou com manchas vermelhas na pele"
+                    ],
+                    "GREETING": [
+                        "olá, como vai?",
+                        "tudo bem com você?",
+                        "boa tarde, só passei para dar um oi",
+                        "bom dia, espero que esteja bem"
+                    ]
+                }
+                
+                # Gera cache (centróides) apenas na primeira requisição
+                if not hasattr(self, '_intent_embeddings_cache'):
+                    self._intent_embeddings_cache = {}
+                    for intent_cat, examples in intent_examples.items():
+                        embeddings = rag_service.model.encode(examples)
+                        mean_emb = np.mean(embeddings, axis=0)
+                        # Normaliza para otimizar com Produto Escalar (Dot Product)
+                        norm = np.linalg.norm(mean_emb)
+                        self._intent_embeddings_cache[intent_cat] = mean_emb / norm if norm > 0 else mean_emb
+                        
+                # Computa o vetor para a mensagem atual
+                msg_embedding = rag_service.model.encode([msg_lower])[0]
+                msg_norm = np.linalg.norm(msg_embedding)
+                if msg_norm > 0:
+                    msg_embedding = msg_embedding / msg_norm
+                    
+                best_intent = "OTHER"
+                best_score = -1.0
+                
+                # Classificador de distância
+                for intent_cat, cat_embedding in self._intent_embeddings_cache.items():
+                    score = np.dot(msg_embedding, cat_embedding)
+                    if score > best_score:
+                        best_score = score
+                        best_intent = intent_cat
+                        
+                print(f"[AI][DEBUG] Intent classificada via EMBEDDINGS (Score: {best_score:.3f}): {best_intent}", flush=True)
+                
+                # Aplica um limiar de confiança (se não bater com nada fortemente, cai no OTHER ou Fallback)
+                if best_score > 0.35: 
+                    return best_intent
+                    
+            except Exception as e:
+                print(f"[AI][ERROR] Falha na classificação por Embeddings: {e}. Usando Fallback.", flush=True)
+
+        # 3. FALLBACK: HEURÍSTICA DE REGEX/STEMS (Caso o modelo RAG não esteja na memória)
+        msg_unaccented = unicodedata.normalize('NFKD', msg_lower).encode('ascii', 'ignore').decode('utf-8')
+        
+        # Emergências
         emergencies = ['dor forte', 'dor aguda', 'falta de ar', 'infarto', 'socorro', 'urgente', 'morrendo', 'samu', 'ambulancia']
         if any(e in msg_unaccented for e in emergencies):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: EMERGENCY", flush=True)
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: EMERGENCY", flush=True)
             return "EMERGENCY"
 
-        # 3. Consultas de Saúde, Doenças e Sintomas (Stems expandidos)
+        # Consultas de Saúde (Stems)
         health_stems = [
             "dor", "febr", "quent", "nariz", "toss", "grip", "sintom", "remedi", "medic",
             "sus", "protocol", "diretriz", "pressao", "ferid", "inflama", "diarrei", "vomit",
@@ -245,21 +314,17 @@ Siga EXATAMENTE esta estrutura:
             "cicatriz", "queloid", "umbigo", "unha", "calvicie", "careca", "pelada", "aguada", "esverdeada"
         ]
         
-        # Palavras exatas
         exact_words = ["mal", "sus"]
-        
-        # Checa raízes
         if any(stem in msg_unaccented for stem in health_stems):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: HEALTH_QUERY", flush=True)
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY", flush=True)
             return "HEALTH_QUERY"
             
-        # Checa palavras exatas com split
         words = msg_unaccented.split()
         if any(w in words for w in exact_words):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: HEALTH_QUERY", flush=True)
+            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY", flush=True)
             return "HEALTH_QUERY"
             
-        print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA: OTHER", flush=True)
+        print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: OTHER", flush=True)
         return "OTHER"
 
     def analyze_patient_triage(self, patient_history_text):
