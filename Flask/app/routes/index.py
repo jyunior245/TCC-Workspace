@@ -4,6 +4,7 @@ from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
 import threading
 from app.services.ai_service import HealthAgent
+from app.utils.decorators import login_required
 
 agent = HealthAgent()
 
@@ -93,10 +94,8 @@ def register():
     return render_template('register.html')
 
 @register_bp.route('/register/complete', methods=['GET', 'POST'])
+@login_required
 def complete_registration():
-    if 'user_id' not in session:
-        return redirect(url_for('login.login'))
-    
     user_type = session.get('user_type')
 
     if request.method == 'POST':
@@ -290,10 +289,8 @@ def recover_access(token):
     return render_template('patient_recovery.html', token=token)
 
 @index_bp.route('/delete_account', methods=['POST'])
+@login_required
 def delete_account():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'Usuário não autenticado.'}), 401
-
     user_id = session['user_id']
     try:
         # 1. Deleta do Banco de Dados local e histórico

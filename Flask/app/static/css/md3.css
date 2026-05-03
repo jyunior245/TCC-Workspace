@@ -188,14 +188,52 @@ body {
   background-color: rgba(103, 80, 164, 0.08); /* Primary with opacity */
 }
 
-/* Flash Messages */
-.md-banner {
-  background-color: var(--md-sys-color-error-container);
-  color: var(--md-sys-color-on-error-container);
+/* Flash Messages as Toasts */
+.flash-messages-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 90%;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.md-banner, .md-banner-error, .md-banner-success {
   padding: 12px 16px;
   border-radius: var(--md-sys-shape-corner-medium);
-  margin-bottom: 16px;
   font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-2);
+  pointer-events: auto;
+  animation: toastSlideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.md-banner {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.md-banner-error {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.md-banner-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Password Strength Meter */

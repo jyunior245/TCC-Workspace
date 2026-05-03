@@ -15,11 +15,11 @@ voice = VoiceService(init_pygame=False)
 # Cache temporário para o áudio (evita passar texto gigante na URL)
 audio_sessions = {}
 
-@chat_bp.route('/api/chat', methods=['POST'])
-def chat():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized. Usuário não autenticado.'}), 401
+from app.utils.decorators import login_required
 
+@chat_bp.route('/api/chat', methods=['POST'])
+@login_required
+def chat():
     user_id = session.get('user_id')
     data = request.get_json()
     user_message = data.get('message')
@@ -131,10 +131,8 @@ def stream_audio():
     return Response(stream_with_context(generate()), mimetype="audio/mpeg")
 
 @chat_bp.route('/api/audio', methods=['POST'])
+@login_required
 def generate_audio():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     data = request.get_json()
     text = data.get('text')
     if not text:
@@ -152,11 +150,9 @@ def voice_page():
     return render_template('voice.html')
 
 @chat_bp.route('/api/chat/end', methods=['POST'])
+@login_required
 def end_chat():
     """Encerrar a conversa e atualizar a Janela de Contexto (KB) de modo síncrono ou assíncrono."""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized. Usuário não autenticado.'}), 401
-
     user_id = session.get('user_id')
     
     # Recupenrando o app para ser invocado na thread

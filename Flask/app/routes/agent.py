@@ -7,14 +7,11 @@ from app.services.ai_service import HealthAgent
 agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 ai_svc = HealthAgent()
 
-from app.utils.decorators import login_required
+from app.utils.decorators import agent_required
 
 @agent_bp.route('/dashboard')
-@login_required
+@agent_required
 def dashboard():
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return redirect(url_for('login.login'))
-        
     if not session.get('is_active', False):
          return redirect(url_for('register.complete_registration'))
 
@@ -25,10 +22,8 @@ def dashboard():
     return render_template('agent_dashboard.html', patients=linked_patients, agent_name=user.name if user else "Agente")
 
 @agent_bp.route('/link_patient', methods=['POST'])
+@agent_required
 def link_patient():
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Não autorizado"}), 401
-
     patient_code = request.form.get('patient_code')
     if not patient_code:
         flash("Código do paciente é obrigatório.", "error")
@@ -44,10 +39,8 @@ def link_patient():
     return redirect(url_for('agent.dashboard'))
 
 @agent_bp.route('/generate_recovery_link/<patient_id>', methods=['POST'])
+@agent_required
 def generate_recovery_link(patient_id):
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     agent_id = session['user_id']
     patient = UserRepository.get_user_by_id(patient_id)
     
@@ -74,10 +67,8 @@ def generate_recovery_link(patient_id):
     })
 
 @agent_bp.route('/generate_report/<patient_id>', methods=['POST'])
+@agent_required
 def generate_report(patient_id):
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     from datetime import datetime, timezone, timedelta
     from app.models.daily_report import DailyReport
     
@@ -110,10 +101,8 @@ def generate_report(patient_id):
         return jsonify({"success": False, "message": status_message})
 
 @agent_bp.route('/update_report/<patient_id>', methods=['POST'])
+@agent_required
 def update_report(patient_id):
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     agent_id = session['user_id']
     patient = UserRepository.get_user_by_id(patient_id)
     if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
@@ -127,10 +116,8 @@ def update_report(patient_id):
         return jsonify({"success": False, "message": status_message})
 
 @agent_bp.route('/triage', methods=['GET'])
+@agent_required
 def triage():
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     agent_id = session['user_id']
     linked_patients = UserRepository.get_linked_patients(agent_id)
     
@@ -178,10 +165,8 @@ def triage():
     return jsonify({"success": True, "triage_list": triage_results})
 
 @agent_bp.route('/history/<patient_id>', methods=['GET'])
+@agent_required
 def get_history(patient_id):
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     from app.models.daily_report import DailyReport
     reports = DailyReport.query.filter_by(patient_id=patient_id).order_by(DailyReport.date.desc()).all()
     
@@ -196,10 +181,8 @@ def get_history(patient_id):
     return jsonify({"success": True, "history": history_data})
 
 @agent_bp.route('/download_report/<int:report_id>', methods=['GET'])
+@agent_required
 def download_report(report_id):
-    if 'user_id' not in session or session.get('user_type') != 'health_agent':
-        return jsonify({"success": False, "message": "Acesso negado"}), 403
-
     from app.models.daily_report import DailyReport
     report = DailyReport.query.get_or_404(report_id)
     

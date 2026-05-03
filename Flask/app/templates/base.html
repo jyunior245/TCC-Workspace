@@ -18,15 +18,21 @@
 </head>
 <body>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="md-banner">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <div class="flash-messages-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% set banner_class = 'md-banner-error' if category == 'error' else 'md-banner-success' if category == 'success' else 'md-banner' %}
+                    <div class="{{ banner_class }}">
+                        <span class="material-icons-outlined">
+                            {{ 'error_outline' if category == 'error' else 'check_circle' if category == 'success' else 'info' }}
+                        </span>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
 
     {% block content %}{% endblock %}
 
