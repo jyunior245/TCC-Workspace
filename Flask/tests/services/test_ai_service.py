@@ -1,5 +1,7 @@
 import pytest
 import json
+from datetime import datetime
+import numpy as np
 from app.services.ai_service import HealthAgent
 import app.services.ai_service
 
@@ -145,3 +147,179 @@ def test_update_patient_context_success(mocker):
     result = agent.update_patient_context("pat123")
     assert "nome_do_paciente" in result
     mock_repo.assert_called_once()
+
+def test_classify_intent_embeddings_success(mocker):
+    """Testa a classificação de intenção via Embeddings (RAG model ativo)."""
+    # Mock do rag_service para ter um modelo de embeddings fake
+    class FakeModel:
+        def encode(self, texts):
+            return [np.array([1.0, 0.0, 0.0]) for _ in texts]
+            
+    agent = HealthAgent()
+    if hasattr(agent, '_intent_embeddings_cache'):
+        delattr(agent, '_intent_embeddings_cache')
+        
+    mocker.patch('app.services.ai_service.rag_service.model', FakeModel())
+    
+    mock_dot = mocker.patch('app.services.ai_service.np.dot')
+    mock_dot.side_effect = [0.9, 0.1, 0.1] # EMERGENCY ganha
+    
+    intent = agent._classify_intent("dor no peito")
+    assert intent == "EMERGENCY"
+
+def test_generate_daily_report_update_existing_no_new_chats(mocker):
+    """Testa a atualização incremental de relatório diário sem novas interações."""
+    agent = HealthAgent()
+    
+    mock_report = mocker.MagicMock(updated_at=datetime.utcnow(), content="Relatório antigo")
+    mocker.patch('app.services.ai_service.DailyReportRepository.get_by_patient_and_date', return_value=mock_report)
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_chats_for_report', return_value=[])
+    
+    result = agent.generate_daily_report("pat123", update_existing=True)
+    assert result[0] == "Relatório antigo"
+    assert "Não há novas mensagens" in result[1]
+
+def test_generate_daily_report_update_existing_success(mocker):
+    """Testa a atualização incremental de relatório diário com novas interações."""
+    agent = HealthAgent()
+    
+    mock_report = mocker.MagicMock(updated_at=datetime.utcnow(), content="Relatório antigo")
+    mock_chat = mocker.MagicMock(message="Nova dor", response="Tomar remédio", intent="HEALTH_QUERY")
+    mock_chat.timestamp.strftime.return_value = "10:00"
+    
+    mocker.patch('app.services.ai_service.DailyReportRepository.get_by_patient_and_date', return_value=mock_report)
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_chats_for_report', return_value=[mock_chat])
+    
+    mock_json = 'Relatório Antigo atualizado com nova dor'
+    mocker.patch.object(agent, '_call_llama', return_value=mock_json)
+    mock_update = mocker.patch('app.services.ai_service.DailyReportRepository.update_report')
+    
+    result = agent.generate_daily_report("pat123", update_existing=True)
+    assert "Relatório Antigo" in result[0]
+    mock_update.assert_called_once()
+
+def test_get_response_success(mocker):
+    """Testa o fluxo principal de get_response."""
+    agent = HealthAgent()
+    
+    mocker.patch.object(agent, '_classify_intent', return_value="HEALTH_QUERY")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_recent_chats', return_value=[])
+    mocker.patch('app.services.ai_service.rag_service.query_protocols_with_sources', return_value=("Contexto", ["Fonte 1"]))
+    mocker.patch.object(agent, '_call_llama_chat', return_value="Resposta da IA")
+    mock_save = mocker.patch('app.services.ai_service.ChatHistoryRepository.save_chat')
+    
+    response = agent.get_response("Estou com dor de cabeça", user_id="user1")
+    
+    assert response == "Resposta da IA"
+    mock_save.assert_called_once_with("user1", "Estou com dor de cabeça", "Resposta da IA", "HEALTH_QUERY")
+
+def test_get_response_greeting_intent(mocker):
+    """Testa get_response com intent GREETING — RAG não deve ser acionado."""
+    agent = HealthAgent()
+
+    mocker.patch.object(agent, '_classify_intent', return_value="GREETING")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_recent_chats', return_value=[])
+    mock_rag = mocker.patch('app.services.ai_service.rag_service.query_protocols_with_sources')
+    mocker.patch.object(agent, '_call_llama_chat', return_value="Olá! Como posso te ajudar hoje?")
+    mock_save = mocker.patch('app.services.ai_service.ChatHistoryRepository.save_chat')
+
+    response = agent.get_response("oi", user_id="user1")
+
+    assert response == "Olá! Como posso te ajudar hoje?"
+    mock_rag.assert_not_called()
+    mock_save.assert_called_once_with("user1", "oi", "Olá! Como posso te ajudar hoje?", "GREETING")
+
+def test_get_response_emergency_intent(mocker):
+    """Testa get_response com intent EMERGENCY — RAG deve ser acionado e chat persistido."""
+    agent = HealthAgent()
+
+    mocker.patch.object(agent, '_classify_intent', return_value="EMERGENCY")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_recent_chats', return_value=[])
+    mock_rag = mocker.patch(
+        'app.services.ai_service.rag_service.query_protocols_with_sources',
+        return_value=("Protocolo de emergência cardíaca.", ["Manual_SUS.pdf"])
+    )
+    mocker.patch.object(agent, '_call_llama_chat', return_value="Ligue imediatamente para o SAMU: 192.")
+    mock_save = mocker.patch('app.services.ai_service.ChatHistoryRepository.save_chat')
+
+    response = agent.get_response("estou com dor no peito", user_id="user1")
+
+    assert response == "Ligue imediatamente para o SAMU: 192."
+    mock_rag.assert_called_once()
+    mock_save.assert_called_once_with("user1", "estou com dor no peito", "Ligue imediatamente para o SAMU: 192.", "EMERGENCY")
+
+def test_get_response_no_user_id(mocker):
+    """Testa get_response sem user_id — chat não deve ser persistido no banco."""
+    agent = HealthAgent()
+
+    mocker.patch.object(agent, '_classify_intent', return_value="HEALTH_QUERY")
+    mocker.patch(
+        'app.services.ai_service.rag_service.query_protocols_with_sources',
+        return_value=("Contexto SUS", [])
+    )
+    mocker.patch.object(agent, '_call_llama_chat', return_value="Resposta sem usuário identificado")
+    mock_save = mocker.patch('app.services.ai_service.ChatHistoryRepository.save_chat')
+
+    response = agent.get_response("estou com febre")  # Sem user_id
+
+    assert response == "Resposta sem usuário identificado"
+    mock_save.assert_not_called()
+
+def test_update_patient_context_updates_existing(mocker):
+    """Testa que update_patient_context aciona update_context (e não create_context) quando já há contexto salvo."""
+    agent = HealthAgent()
+    mock_chat = mocker.MagicMock(message="Febre alta", response="Tome paracetamol")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_chats_for_context', return_value=[mock_chat])
+
+    mock_existing_context = mocker.MagicMock()
+    mock_existing_context.updated_at = None
+    mock_existing_context.context_data = {"nome_do_paciente": "João"}
+    mocker.patch('app.services.ai_service.PatientContextRepository.get_context_by_patient', return_value=mock_existing_context)
+
+    mock_json = '{"nome_do_paciente": "João", "sintomas_relatados": ["Febre"], "medicacoes_relatadas": [], "acoes_recomendadas_pela_ia": [], "observacoes_adicionais": ""}'
+    mocker.patch.object(agent, '_call_llama', return_value=mock_json)
+
+    mock_user = mocker.MagicMock()
+    mock_user.name = "João"
+    mocker.patch('app.services.ai_service.UserRepository.get_user_by_id', return_value=mock_user)
+
+    mock_update = mocker.patch('app.services.ai_service.PatientContextRepository.update_context')
+    mock_create = mocker.patch('app.services.ai_service.PatientContextRepository.create_context')
+
+    result = agent.update_patient_context("pat123")
+
+    assert result is not None
+    assert "nome_do_paciente" in result
+    mock_update.assert_called_once()
+    mock_create.assert_not_called()
+
+def test_update_patient_context_invalid_json(mocker):
+    """Testa que update_patient_context retorna None com segurança quando o LLM retorna JSON inválido."""
+    agent = HealthAgent()
+    mock_chat = mocker.MagicMock(message="Tosse", response="Beba água")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_chats_for_context', return_value=[mock_chat])
+    mocker.patch('app.services.ai_service.PatientContextRepository.get_context_by_patient', return_value=None)
+
+    mocker.patch.object(agent, '_call_llama', return_value="Não consigo responder agora.")
+
+    result = agent.update_patient_context("pat123")
+
+    assert result is None  # Fallback seguro: sem contexto anterior e JSON inválido retorna None
+
+def test_generate_daily_report_db_save_error(mocker):
+    """Testa que o serviço retorna o conteúdo gerado mesmo quando o banco falha ao salvar."""
+    agent = HealthAgent()
+
+    mock_chat = mocker.MagicMock(message="Dor de cabeça", response="Tome água")
+    mocker.patch('app.services.ai_service.ChatHistoryRepository.get_chats_for_report', return_value=[mock_chat])
+    mocker.patch('app.services.ai_service.DailyReportRepository.get_by_patient_and_date', return_value=None)
+    mocker.patch.object(agent, '_call_llama', return_value="Relatório gerado com sucesso pelo LLM")
+    mocker.patch(
+        'app.services.ai_service.DailyReportRepository.create_report',
+        side_effect=Exception("DB Connection Error")
+    )
+
+    result_content, result_message = agent.generate_daily_report("pat123")
+
+    assert result_content == "Relatório gerado com sucesso pelo LLM"
+    assert "erro ao salvar no banco" in result_message.lower()
