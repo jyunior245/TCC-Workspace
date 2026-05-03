@@ -1,4 +1,5 @@
-from flask import Blueprint, flash, request, session, redirect, url_for, render_template, jsonify
+from flask import Blueprint, flash, request, session, redirect, url_for, render_template, jsonify, current_app
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
 import threading
@@ -45,7 +46,8 @@ def login():
                  flash("Usuário não encontrado no banco de dados local.")
 
         except Exception as e:
-            flash(f"Falha no login: {str(e)}")
+            flash(f"Não conseguimos entrar: {str(e)}", "error")
+            print(f"Login error: {e}")
             print(f"Login error: {e}")
 
     return render_template('login.html')
@@ -69,30 +71,33 @@ def register():
                 flash("Nome de usuário indisponível. Escolha outro.")
                 return render_template('register.html')
 
-            # GUARDA NA SESSÃO PARA NÃO AUTENTICAR ANTES DE TERMINAR O PERFIL (Conforme pedido pelo usuário)
-            session['temp_reg'] = {
-                'name': name,
-                'username': username,
-                'email': email,
-                'password': password,
-                'user_type': user_type
-            }
+            # Cria o usuário no Firebase e no BD Local como Inativo
+            firebase_user = AuthService.create_firebase_user(email, password)
+            user_id = firebase_user['localId']
+            
+            UserRepository.create_user(user_id, name, username, email, user_type)
+
+            session['user_id'] = user_id
+            session['user_type'] = user_type
+            session['user_name'] = name
+            session['is_active'] = False
+            session.permanent = True
 
             flash("Certo! Agora complete seus dados para finalizar a criação da conta.")
             return redirect(url_for('register.complete_registration'))
 
         except Exception as e:
-            flash(f"Falha no registro inicial: {str(e)}")
+            flash(f"Puxa, tivemos um problema: {str(e)}", "error")
             print(f"Registration error: {e}")
 
     return render_template('register.html')
 
 @register_bp.route('/register/complete', methods=['GET', 'POST'])
 def complete_registration():
-    if 'user_id' not in session and 'temp_reg' not in session:
+    if 'user_id' not in session:
         return redirect(url_for('login.login'))
     
-    user_type = session['temp_reg']['user_type'] if 'temp_reg' in session else session.get('user_type')
+    user_type = session.get('user_type')
 
     if request.method == 'POST':
         created_fb = False
@@ -158,25 +163,7 @@ def complete_registration():
                     'community_activities': request.form.get('community_activities') == 'yes',
                 }
             
-                # 1. AGORA SIM, CRIA NO FIREBASE E BD DE FORMA ATÔMICA SE FOR NECESSÁRIO
-                if 'temp_reg' in session:
-                    temp = session['temp_reg']
-                    try:
-                        firebase_user = AuthService.create_firebase_user(temp['email'], temp['password'])
-                        user_id = firebase_user['localId']
-                        created_fb = True
-                        
-                        UserRepository.create_user(user_id, temp['name'], temp['username'], temp['email'], temp['user_type'])
-                        
-                        # Set session for auth flow
-                        session['user_id'] = user_id
-                        session['user_type'] = temp['user_type']
-                        session['user_name'] = temp['name']
-                    except Exception as creation_err:
-                        # Se falhar logo aqui, repassa
-                        raise creation_err
-
-                # Se chegamos aqui, ou o usuário já era DB local ou criamos agorinha!
+                # Usuário já foi criado no BD local no passo 1.
                 UserRepository.create_patient_profile(user_id, data)
                 
             elif user_type == 'health_agent':
@@ -192,28 +179,10 @@ def complete_registration():
                     'simet_codigo_municipio': request.form.get('simet_codigo_municipio')
                 }
                 
-                if 'temp_reg' in session:
-                    temp = session['temp_reg']
-                    try:
-                        firebase_user = AuthService.create_firebase_user(temp['email'], temp['password'])
-                        user_id = firebase_user['localId']
-                        created_fb = True
-                        
-                        UserRepository.create_user(user_id, temp['name'], temp['username'], temp['email'], temp['user_type'])
-                        
-                        session['user_id'] = user_id
-                        session['user_type'] = temp['user_type']
-                        session['user_name'] = temp['name']
-                    except Exception as creation_err:
-                        raise creation_err
-                
                 print(f"[DEBUG] Criando perfil de ACS para user_id: {user_id}")
                 UserRepository.create_agent_profile(user_id, data)
             
             flash("Cadastro concluído com sucesso!")
-            
-            # Limpa temporários
-            session.pop('temp_reg', None)
             
             # Redireciona para o dashboard do usuário
             session['is_active'] = True
@@ -223,21 +192,7 @@ def complete_registration():
                 return redirect(url_for('agent.dashboard'))
 
         except Exception as e:
-            # --- ROLLBACK FIREBASE IMPORTANTE ---
-            if created_fb and firebase_user and 'idToken' in firebase_user:
-                try:
-                    AuthService.delete_firebase_user(firebase_user['idToken'])
-                    # Usuário local também foi feito rollback automaticamente pela Exception no create_user ou create_profile
-                    # O SQLAlchemy faz db.session.rollback() internamente nas funções do repositorio
-                except Exception as rollback_err:
-                    print(f"Erro no rollback do Firebase: {rollback_err}")
-                
-                # Desfazer login da conta lixo
-                session.pop('user_id', None)
-                session.pop('user_type', None)
-                session.pop('user_name', None)
-            
-            flash(f"Erro ao salvar dados complementares: {str(e)}")
+            flash(f"Erro ao salvar dados complementares: {str(e)}", "error")
             print(f"Completion error: {str(e)}")
             import traceback
             traceback.print_exc()
@@ -255,6 +210,84 @@ def logout():
     session.clear()
     flash("Sessão encerrada.")
     return redirect(url_for('login.login'))
+
+@login_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        if not email:
+            flash("Por favor, informe seu e-mail.", "error")
+        else:
+            try:
+                AuthService.send_password_reset_email(email)
+                flash("Se esse e-mail estiver cadastrado, você receberá um link para redefinir sua senha.", "success")
+                return redirect(url_for('login.login'))
+            except Exception as e:
+                # Ocultar o erro real por segurança, mas se quiser pode mostrar str(e)
+                flash("Houve um problema ao enviar o e-mail de recuperação. Tente novamente.", "error")
+    return render_template('forgot_password.html')
+
+@index_bp.route('/recover-access/<token>', methods=['GET', 'POST'])
+def recover_access(token):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        # Link expira em 30 minutos (1800 segundos)
+        data = serializer.loads(token, max_age=1800)
+    except SignatureExpired:
+        flash("O link de recuperação expirou. Solicite um novo ao Agente de Saúde.", "error")
+        return redirect(url_for('login.login'))
+    except BadSignature:
+        flash("Link de recuperação inválido.", "error")
+        return redirect(url_for('login.login'))
+        
+    patient_id = data.get('patient_id')
+    if not patient_id or data.get('action') != 'recover_password':
+        flash("Link inválido.", "error")
+        return redirect(url_for('login.login'))
+
+    if request.method == 'POST':
+        cpf = request.form.get('cpf')
+        # dob format from HTML date input is usually YYYY-MM-DD
+        dob_str = request.form.get('dob')
+        new_password = request.form.get('password')
+        
+        if not cpf or not dob_str or not new_password:
+            flash("Todos os campos são obrigatórios.", "error")
+            return render_template('patient_recovery.html', token=token)
+            
+        # Clean CPF
+        cpf = ''.join(filter(str.isdigit, cpf))
+        
+        # Verify against DB
+        patient = UserRepository.get_user_by_id(patient_id)
+        if not patient or not patient.patient_profile:
+            flash("Paciente não encontrado.", "error")
+            return redirect(url_for('login.login'))
+            
+        # Parse DB values
+        db_cpf = ''.join(filter(str.isdigit, patient.patient_profile.cpf)) if patient.patient_profile.cpf else ""
+        db_dob = patient.patient_profile.date_of_birth.strftime('%Y-%m-%d') if patient.patient_profile.date_of_birth else ""
+        
+        # Handle possible DD/MM/YYYY format if browser fell back to text input
+        if dob_str and '/' in dob_str:
+            parts = dob_str.split('/')
+            if len(parts) == 3:
+                # Assuming DD/MM/YYYY
+                dob_str = f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+
+        if cpf != db_cpf or dob_str != db_dob:
+            flash("Dados incorretos. A recuperação de senha exige confirmação exata da identidade.", "error")
+            return render_template('patient_recovery.html', token=token)
+            
+        # All good, update password
+        try:
+            AuthService.admin_update_user_password(patient_id, new_password)
+            flash("Senha alterada com sucesso! Você já pode entrar com sua nova senha.", "success")
+            return redirect(url_for('login.login'))
+        except Exception as e:
+            flash(str(e), "error")
+            
+    return render_template('patient_recovery.html', token=token)
 
 @index_bp.route('/delete_account', methods=['POST'])
 def delete_account():

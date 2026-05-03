@@ -113,7 +113,10 @@
                                     <p>CÓDIGO: {{ patient.patient_code }}</p>
                                 </div>
                             </div>
-                            <div class="patient-actions">
+                            <div class="patient-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="md-button text" onclick="openRecoveryModal('{{ patient.id }}', '{{ patient.user.name }}')" style="color: var(--md-sys-color-primary); padding: 0 12px;" title="Recuperar Acesso">
+                                    <span class="material-icons-outlined">lock_reset</span>
+                                </button>
                                 <button class="md-button tonal" onclick="showReports('{{ patient.id }}', '{{ patient.user.name }}')">
                                     <span class="material-icons-outlined">history</span>
                                     Histórico
@@ -204,6 +207,56 @@
         <div class="modal-content" id="modalContent">
             <div class="report-markdown" id="modalMarkdownBody">
                 <!-- Conteúdo vai aqui -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Recuperação de Acesso -->
+<div class="modal-scrim" id="recoveryModalScrim">
+    <div class="modal-container" style="max-width: 500px;">
+        <header class="modal-header">
+            <h2 id="recoveryModalTitle">Recuperar Acesso</h2>
+            <button class="modal-close-btn" onclick="closeRecoveryModal()">
+                <span class="material-icons-outlined">close</span>
+            </button>
+        </header>
+        
+        <div class="modal-content">
+            <p class="body-large" style="margin-bottom: 16px;">Gere um link seguro de recuperação para enviar ao cuidador de <strong id="recoveryPatientName"></strong>.</p>
+            
+            <div id="recoveryLoader" style="display: none; align-items: center; justify-content: center; padding: 24px;">
+                <div class="spinner" style="width: 32px; height: 32px; border: 4px solid var(--md-sys-color-surface-variant); border-top-color: var(--md-sys-color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            </div>
+
+            <div id="recoveryActions" style="text-align: center;">
+                <button class="md-button filled" onclick="generateRecoveryLink()" style="width: 100%; height: 56px; font-size: 1.1rem; margin-bottom: 16px;">
+                    <span class="material-icons-outlined">link</span>
+                    Gerar Link de Recuperação
+                </button>
+            </div>
+
+            <div id="recoveryResult" style="display: none; flex-direction: column; gap: 16px;">
+                <div style="background: #f0fdf4; padding: 16px; border-radius: 12px; border: 1px solid #bbf7d0;">
+                    <p style="color: #166534; margin: 0; font-weight: 500;">Link gerado com sucesso!</p>
+                    <p style="margin-top: 8px; font-size: 0.9rem; color: #15803d;">Este link expira em 30 minutos e exige confirmação de CPF para uso.</p>
+                </div>
+                
+                <div class="md-text-field" style="margin-bottom: 0;">
+                    <input type="text" id="recoveryLinkInput" readonly style="font-size: 0.9rem;">
+                </div>
+                
+                <div style="display: flex; gap: 12px; flex-direction: column;">
+                    <button class="md-button tonal" onclick="copyRecoveryLink()" style="width: 100%;">
+                        <span class="material-icons-outlined">content_copy</span>
+                        Copiar Link
+                    </button>
+                    
+                    <a id="whatsappBtn" href="#" target="_blank" class="md-button filled" style="width: 100%; background-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span class="material-icons-outlined">chat</span>
+                        Enviar pelo WhatsApp
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -470,6 +523,68 @@
             console.error('Error:', error);
             alert("Erro de rede.");
         });
+    }
+    
+    // --- Lógica de Recuperação de Senha ---
+    let recoveryPatientId = '';
+    const recoveryScrim = document.getElementById('recoveryModalScrim');
+    
+    function openRecoveryModal(patientId, name) {
+        recoveryPatientId = patientId;
+        document.getElementById('recoveryPatientName').innerText = name;
+        document.getElementById('recoveryResult').style.display = 'none';
+        document.getElementById('recoveryActions').style.display = 'block';
+        recoveryScrim.classList.add('active');
+    }
+    
+    function closeRecoveryModal() {
+        recoveryScrim.classList.remove('active');
+    }
+    
+    recoveryScrim.addEventListener('click', (e) => {
+        if (e.target === recoveryScrim) closeRecoveryModal();
+    });
+
+    async function generateRecoveryLink() {
+        document.getElementById('recoveryActions').style.display = 'none';
+        document.getElementById('recoveryLoader').style.display = 'flex';
+        
+        try {
+            const response = await fetch(`/agent/generate_recovery_link/${recoveryPatientId}`, { method: 'POST' });
+            const data = await response.json();
+            
+            document.getElementById('recoveryLoader').style.display = 'none';
+            
+            if (data.success) {
+                document.getElementById('recoveryResult').style.display = 'flex';
+                document.getElementById('recoveryLinkInput').value = data.recovery_url;
+                
+                const phone = data.caregiver_phone.replace(/\D/g,'');
+                const msg = `Olá ${data.caregiver_name}, aqui é o Agente de Saúde. Segue o link seguro para cadastrar uma nova senha para o paciente ${data.patient_name}:\n\n${data.recovery_url}\n\nO link expira em 30 minutos e exigirá a confirmação do CPF.`;
+                const waUrl = phone ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+                
+                document.getElementById('whatsappBtn').href = waUrl;
+                if(!phone) {
+                    document.getElementById('whatsappBtn').innerHTML = `<span class="material-icons-outlined">chat</span>Enviar WhatsApp (Sem nº salvo)`;
+                } else {
+                    document.getElementById('whatsappBtn').innerHTML = `<span class="material-icons-outlined">chat</span>Enviar para ${data.caregiver_phone}`;
+                }
+            } else {
+                alert("Erro ao gerar link: " + data.message);
+                document.getElementById('recoveryActions').style.display = 'block';
+            }
+        } catch (e) {
+            document.getElementById('recoveryLoader').style.display = 'none';
+            document.getElementById('recoveryActions').style.display = 'block';
+            alert('Erro de rede.');
+        }
+    }
+    
+    function copyRecoveryLink() {
+        const input = document.getElementById('recoveryLinkInput');
+        input.select();
+        document.execCommand('copy');
+        alert('Link copiado!');
     }
 </script>
 {% endblock %}

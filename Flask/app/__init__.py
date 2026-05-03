@@ -1,5 +1,6 @@
 from flask import Flask 
 import os
+from datetime import timedelta
 from app.routes.index import index_bp
 from app.routes.index import login_bp
 from app.routes.index import register_bp
@@ -15,6 +16,7 @@ from dotenv import load_dotenv
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.secret_key="supersecretkey"
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
     # Load .env from parent directory
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

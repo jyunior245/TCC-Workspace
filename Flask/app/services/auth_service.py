@@ -63,6 +63,15 @@ class AuthService:
             raise Exception(error_msg)
 
     @staticmethod
+    def send_password_reset_email(email):
+        """Sends a password reset email via Pyrebase."""
+        try:
+            auth.send_password_reset_email(email)
+        except Exception as e:
+            error_msg = AuthService._parse_firebase_error(e)
+            raise Exception(error_msg)
+
+    @staticmethod
     def delete_firebase_user(id_token):
         """Deletes a user from Firebase Auth using their ID token."""
         try:
@@ -70,6 +79,20 @@ class AuthService:
             print("Rollback: Firebase user deleted successfully.")
         except Exception as e:
             print(f"Failed to rollback Firebase user: {e}")
+
+    @staticmethod
+    def admin_update_user_password(uid, new_password):
+        """Updates a user's password directly via Admin SDK without requiring old password."""
+        try:
+            from app.extensions.firebase_config import auth_admin
+            if auth_admin:
+                auth_admin.update_user(uid, password=new_password)
+                return True
+            else:
+                raise Exception("Admin SDK not configured for user update.")
+        except Exception as e:
+            error_msg = AuthService._parse_firebase_error(e)
+            raise Exception(f"Erro ao atualizar senha no Firebase: {error_msg}")
 
     @staticmethod
     def delete_user_by_uid(uid):

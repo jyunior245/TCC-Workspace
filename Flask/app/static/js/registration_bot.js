@@ -81,6 +81,15 @@ const RegistrationBot = (() => {
     function openModal() {
         if (!modalEl) init();
         modalEl.style.display = 'flex';
+        
+        // Initialize AudioContext immediately on user click to bypass autoplay restrictions
+        if (!currentAudioContext) {
+            currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (currentAudioContext.state === 'suspended') {
+            currentAudioContext.resume();
+        }
+
         // Start conversation
         startConversation();
     }
@@ -180,8 +189,8 @@ const RegistrationBot = (() => {
         if (data.audio_b64) {
             playAudio(data.audio_b64, () => {
                 setProcessing(false);
-                // Opcional: Auto-ligar o microfone após a IA falar
-                // toggleMic(); 
+                // Auto-ligar o microfone após a IA falar para facilitar para idosos
+                toggleMic(); 
             });
         } else {
             setProcessing(false);

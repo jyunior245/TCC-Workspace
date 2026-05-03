@@ -3,7 +3,10 @@ from app.repositories.user_repository import UserRepository
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 
+from app.utils.decorators import login_required
+
 @patient_bp.route('/dashboard')
+@login_required
 def dashboard():
     if 'user_id' not in session or session.get('user_type') != 'patient':
         return redirect(url_for('login.login'))

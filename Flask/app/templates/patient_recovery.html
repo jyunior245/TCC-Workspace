@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Recuperação de Acesso Seguro{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+<style>
+    .auth-card {
+        max-width: 500px;
+        margin: 60px auto;
+        padding: 40px;
+        border-radius: 24px;
+        background: var(--md-sys-color-surface);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .auth-header .material-icons-outlined {
+        font-size: 56px;
+        color: var(--md-sys-color-primary);
+        margin-bottom: 16px;
+    }
+    .headline-large {
+        font-size: 2rem;
+        margin-bottom: 12px;
+        color: var(--md-sys-color-on-surface);
+    }
+    .body-large {
+        font-size: 1.2rem;
+        color: var(--md-sys-color-on-surface-variant);
+        line-height: 1.5;
+    }
+    .input-large {
+        font-size: 1.2rem;
+        padding: 16px;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span class="material-icons-outlined">verified_user</span>
+            <h2 class="headline-large">Recuperação Segura</h2>
+            <p class="body-large">Para a sua segurança, confirme os dados do paciente antes de criar uma nova senha.</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div style="margin-bottom: 24px;">
+                {% for category, message in messages %}
+                    <div style="padding: 16px; border-radius: 12px; font-size: 1.1rem; background-color: {% if category == 'error' %}#fee2e2{% else %}#dcfce7{% endif %}; color: {% if category == 'error' %}#991b1b{% else %}#166534{% endif %}; margin-bottom: 8px; text-align: center;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('index.recover_access', token=token) }}" method="POST" class="auth-form" id="recoveryForm">
+            
+            <div id="step-1">
+                <h3 style="font-size: 1.3rem; margin-bottom: 16px; color: var(--md-sys-color-primary);">1. Confirme a Identidade</h3>
+                
+                <div class="md-text-field" style="margin-bottom: 24px;">
+                    <input type="text" name="cpf" id="cpf" placeholder=" " required class="input-large">
+                    <label for="cpf" style="font-size: 1.1rem;">CPF do Paciente</label>
+                </div>
+
+                <div class="md-text-field" style="margin-bottom: 32px;">
+                    <input type="date" name="dob" id="dob" required class="input-large">
+                    <label for="dob" style="font-size: 1.1rem; top: -12px;">Data de Nascimento</label>
+                </div>
+
+                <button type="button" class="md-button filled" onclick="nextStep()" style="width: 100%; height: 64px; font-size: 1.3rem;">
+                    Continuar
+                    <span class="material-icons-outlined">arrow_forward</span>
+                </button>
+            </div>
+
+            <div id="step-2" style="display: none;">
+                <h3 style="font-size: 1.3rem; margin-bottom: 16px; color: var(--md-sys-color-primary);">2. Crie a Nova Senha</h3>
+                
+                <div class="md-text-field" style="margin-bottom: 24px;">
+                    <input type="password" name="password" id="password" placeholder=" " class="input-large">
+                    <label for="password" style="font-size: 1.1rem;">Nova Senha</label>
+                </div>
+
+                <div class="md-text-field" style="margin-bottom: 32px;">
+                    <input type="password" id="password_confirm" placeholder=" " class="input-large">
+                    <label for="password_confirm" style="font-size: 1.1rem;">Repita a Nova Senha</label>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="md-button outlined" onclick="prevStep()" style="height: 64px; padding: 0 24px;">
+                        <span class="material-icons-outlined">arrow_back</span>
+                    </button>
+                    <button type="button" class="md-button filled" onclick="submitForm()" style="flex: 1; height: 64px; font-size: 1.3rem; background-color: #2e7d32;">
+                        <span class="material-icons-outlined">save</span>
+                        Salvar Nova Senha
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var cpfInput = document.getElementById('cpf');
+        IMask(cpfInput, { mask: '000.000.000-00' });
+    });
+
+    function nextStep() {
+        const cpf = document.getElementById('cpf').value;
+        const dob = document.getElementById('dob').value;
+        
+        if(cpf.length < 14) {
+            alert('Por favor, informe o CPF completo.');
+            return;
+        }
+        if(!dob) {
+            alert('Por favor, informe a Data de Nascimento.');
+            return;
+        }
+
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+    }
+
+    function prevStep() {
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-1').style.display = 'block';
+    }
+
+    function submitForm() {
+        const pass = document.getElementById('password').value;
+        const confirm = document.getElementById('password_confirm').value;
+        
+        if(!pass || pass.length < 6) {
+            alert('A senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+        if(pass !== confirm) {
+            alert('As senhas não coincidem. Digite novamente.');
+            return;
+        }
+
+        document.getElementById('recoveryForm').submit();
+    }
+</script>
+{% endblock %}

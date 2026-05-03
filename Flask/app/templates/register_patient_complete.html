@@ -259,19 +259,30 @@
 
             <!-- STEP 3: Moradia & Socioeconômico -->
             <div class="wizard-step" id="step-3" style="display: none;">
-                <h3 class="section-title">Moradores</h3>
-                <div class="md-text-field" style="margin-bottom: 12px;">
-                    <input type="number" name="num_residents" id="num_residents" placeholder=" ">
-                    <label for="num_residents">Qtd. Moradores na sua casa</label>
+                <h3 class="section-title">Qtd. Moradores na sua casa</h3>
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; justify-content: center;">
+                    <button type="button" class="md-button outlined" onclick="changeResidents(-1)" style="border-radius: 50%; width: 56px; height: 56px; padding: 0; font-size: 32px; display: flex; align-items: center; justify-content: center;">-</button>
+                    <input type="number" name="num_residents" id="num_residents" value="1" readonly style="font-size: 28px; text-align: center; width: 80px; border: none; background: transparent; color: var(--md-sys-color-on-surface); outline: none;">
+                    <button type="button" class="md-button filled" onclick="changeResidents(1)" style="border-radius: 50%; width: 56px; height: 56px; padding: 0; font-size: 32px; display: flex; align-items: center; justify-content: center;">+</button>
                 </div>
+                <script>
+                    function changeResidents(delta) {
+                        const input = document.getElementById('num_residents');
+                        let val = parseInt(input.value) || 1;
+                        val += delta;
+                        if(val < 1) val = 1;
+                        if(val > 20) val = 20;
+                        input.value = val;
+                    }
+                </script>
 
                 <h3 class="section-title">Infraestrutura</h3>
                 <div class="grid-3" style="margin-bottom: 24px;">
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_potable_water" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">water_drop</span><span style="font-size: 11px;">Água</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_sanitation" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">wc</span><span style="font-size: 11px;">Esgoto</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_garbage_collection" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">delete</span><span style="font-size: 11px;">Lixo</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_electricity" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">bolt</span><span style="font-size: 11px;">Energia</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_internet" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">wifi</span><span style="font-size: 11px;">Internet</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_potable_water" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">water_drop</span><span style="font-size: 16px;">Água</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_sanitation" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">wc</span><span style="font-size: 16px;">Esgoto</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_garbage_collection" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">delete</span><span style="font-size: 16px;">Lixo</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_electricity" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">bolt</span><span style="font-size: 16px;">Energia</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="has_internet" value="yes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">wifi</span><span style="font-size: 16px;">Internet</span></div></label>
                 </div>
 
 
@@ -314,17 +325,17 @@
 
                 <h3 class="section-title">Doenças Crônicas</h3>
                 <div class="grid-3" style="margin-bottom: 24px;">
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Pressão Alta" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #E53935;">favorite</span><span style="font-size: 11px;">Pressão Alta</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Diabetes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FF9800;">water_drop</span><span style="font-size: 11px;">Diabetes</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Coração" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #F44336;">monitor_heart</span><span style="font-size: 11px;">Coração</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Asma/DPOC" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #00BCD4;">air</span><span style="font-size: 11px;">Respiratório</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Osteoporose" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #9E9E9E;">accessibility_new</span><span style="font-size: 11px;">Osteoporose</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="AVC (Derrame)" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #673AB7;">biotech</span><span style="font-size: 11px;">AVC</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Parkinson" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #795548;">vibration</span><span style="font-size: 11px;">Parkinson</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Câncer" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #E91E63;">adjust</span><span style="font-size: 11px;">Câncer</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Doença Renal" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FFEB3B;">opacity</span><span style="font-size: 11px;">Rim</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Visão/Catarata" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #009688;">visibility</span><span style="font-size: 11px;">Visão</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Artrite/Artrose" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FF5722;">pan_tool</span><span style="font-size: 11px;">Artrite</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Pressão Alta" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #E53935;">favorite</span><span style="font-size: 16px;">Pressão Alta</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Diabetes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FF9800;">water_drop</span><span style="font-size: 16px;">Diabetes</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Coração" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #F44336;">monitor_heart</span><span style="font-size: 16px;">Coração</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Asma/DPOC" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #00BCD4;">air</span><span style="font-size: 16px;">Respiratório</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Osteoporose" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #9E9E9E;">accessibility_new</span><span style="font-size: 16px;">Osteoporose</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="AVC (Derrame)" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #673AB7;">biotech</span><span style="font-size: 16px;">AVC</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Parkinson" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #795548;">vibration</span><span style="font-size: 16px;">Parkinson</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Câncer" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #E91E63;">adjust</span><span style="font-size: 16px;">Câncer</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Doença Renal" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FFEB3B;">opacity</span><span style="font-size: 16px;">Rim</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Visão/Catarata" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #009688;">visibility</span><span style="font-size: 16px;">Visão</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="chronic_conditions" value="Artrite/Artrose" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px; color: #FF5722;">pan_tool</span><span style="font-size: 16px;">Artrite</span></div></label>
                 </div>
 
                 <div style="display: flex; gap: 12px;">
@@ -337,15 +348,15 @@
             <div class="wizard-step" id="step-5" style="display: none;">
                 <h3 class="section-title">Saúde Mental e Memória</h3>
                 <div class="grid-3" style="margin-bottom: 24px;">
-                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Boa" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #4CAF50;">sentiment_very_satisfied</span><span style="font-size:12px;">Boa</span></div></label>
-                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Leves" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #FFC107;">sentiment_satisfied</span><span style="font-size:12px;">Esqueço algo</span></div></label>
-                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Constantes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #F44336;">sentiment_dissatisfied</span><span style="font-size:12px;">Esqueço mto</span></div></label>
+                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Boa" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #4CAF50;">sentiment_very_satisfied</span><span style="font-size: 16px;">Boa</span></div></label>
+                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Leves" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #FFC107;">sentiment_satisfied</span><span style="font-size: 16px;">Esqueço algo</span></div></label>
+                    <label class="tactile-card radio-card"><input type="radio" name="perceived_memory" value="Constantes" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 32px; color: #F44336;">sentiment_dissatisfied</span><span style="font-size: 16px;">Esqueço mto</span></div></label>
                 </div>
 
                 <div class="grid-3" style="margin-bottom: 24px;">
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Ansiedade" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">psychology_alt</span><span style="font-size:11px;">Ansiedade</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Depressão" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">mood_bad</span><span style="font-size:11px;">Depressão</span></div></label>
-                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Demência/Alzheimer" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">psychology</span><span style="font-size:11px;">Alzheimer</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Ansiedade" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">psychology_alt</span><span style="font-size: 16px;">Ansiedade</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Depressão" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">mood_bad</span><span style="font-size: 16px;">Depressão</span></div></label>
+                    <label class="tactile-card checkbox-card"><input type="checkbox" name="mental_diagnoses" value="Demência/Alzheimer" class="hidden-input"><div class="card-content"><span class="material-icons-outlined" style="font-size: 24px;">psychology</span><span style="font-size: 16px;">Alzheimer</span></div></label>
                 </div>
 
                 <h3 class="section-title">Hábitos e Sono</h3>
@@ -496,7 +507,8 @@
                     }
                 } catch (err) {
                     console.error("Erro na validação do CPF", err);
-                    isCpfValid = true; // Allow passage if network fails
+                    isCpfValid = false; 
+                    showToast("Erro na validação do CPF. Verifique sua conexão e tente novamente.");
                 }
             } else {
                 isCpfValid = false;

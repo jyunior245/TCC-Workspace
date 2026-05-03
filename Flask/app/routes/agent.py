@@ -1,11 +1,16 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify
+from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, current_app
+from itsdangerous import URLSafeTimedSerializer
+from urllib.parse import quote
 from app.repositories.user_repository import UserRepository
 from app.services.ai_service import HealthAgent
 
 agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 ai_svc = HealthAgent()
 
+from app.utils.decorators import login_required
+
 @agent_bp.route('/dashboard')
+@login_required
 def dashboard():
     if 'user_id' not in session or session.get('user_type') != 'health_agent':
         return redirect(url_for('login.login'))
@@ -37,6 +42,36 @@ def link_patient():
         flash(message, "error")
 
     return redirect(url_for('agent.dashboard'))
+
+@agent_bp.route('/generate_recovery_link/<patient_id>', methods=['POST'])
+def generate_recovery_link(patient_id):
+    if 'user_id' not in session or session.get('user_type') != 'health_agent':
+        return jsonify({"success": False, "message": "Acesso negado"}), 403
+
+    agent_id = session['user_id']
+    patient = UserRepository.get_user_by_id(patient_id)
+    
+    # Check if patient exists and is linked to this agent
+    if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
+        return jsonify({"success": False, "message": "Paciente não vinculado ou não encontrado."}), 403
+
+    # Generate token
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    token = serializer.dumps({'patient_id': patient_id, 'action': 'recover_password'})
+    
+    recovery_url = url_for('index.recover_access', token=token, _external=True)
+    
+    # Get caregiver info
+    caregiver_name = patient.patient_profile.caregiver_name or "Familiar/Cuidador"
+    caregiver_phone = patient.patient_profile.caregiver_phone or ""
+    
+    return jsonify({
+        "success": True,
+        "recovery_url": recovery_url,
+        "caregiver_name": caregiver_name,
+        "caregiver_phone": caregiver_phone,
+        "patient_name": patient.name
+    })
 
 @agent_bp.route('/generate_report/<patient_id>', methods=['POST'])
 def generate_report(patient_id):
