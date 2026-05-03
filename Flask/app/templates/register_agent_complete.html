@@ -69,40 +69,69 @@
         </div>
 
         <form action="/register/complete" method="POST" class="auth-form">
-            <!-- Formação Profissional -->
+            <!-- Sexo -->
             <div class="md-text-field">
-                <input type="text" name="professional_training" id="professional_training" placeholder=" " required>
-                <label for="professional_training">Formação Profissional</label>
+                <select name="gender" id="gender" required>
+                    <option value="" disabled selected></option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outro">Outro</option>
+                    <option value="Prefiro não informar">Prefiro não informar</option>
+                </select>
+                <label for="gender">Sexo</label>
             </div>
 
-            <!-- Vínculo Institucional -->
+            <!-- Número de Telefone -->
             <div class="md-text-field">
-                <input type="text" name="institutional_link" id="institutional_link" placeholder=" " required>
-                <label for="institutional_link">Vínculo Institucional</label>
+                <input type="tel" name="phone_number" id="phone_number" placeholder=" " required>
+                <label for="phone_number">Número de Telefone</label>
             </div>
 
-            <!-- Área de Atuação -->
-            <div class="md-text-field">
-                <input type="text" name="area_of_activity" id="area_of_activity" placeholder=" " required>
-                <label for="area_of_activity">Área de Atuação</label>
+            <div id="address-loading" style="display: none; margin-bottom: 8px; font-size: 14px; color: var(--md-sys-color-primary);">Buscando endereço... <span class="material-icons spin" style="font-size: 14px;">autorenew</span></div>
+            
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="md-text-field">
+                    <input type="text" name="cep" id="cep" placeholder=" " maxlength="9" required>
+                    <label for="cep">CEP</label>
+                </div>
+                <div class="md-text-field">
+                    <select name="state" id="state" required>
+                        <option value="" disabled selected>Selecione...</option>
+                    </select>
+                    <label for="state">UF (Estado)</label>
+                </div>
             </div>
 
-            <!-- Tempo de Serviço -->
+            <!-- Município -->
             <div class="md-text-field">
-                <input type="text" name="service_time" id="service_time" placeholder=" " required>
-                <label for="service_time">Tempo de Serviço</label>
+                <select name="municipio" id="municipio" required>
+                    <option value="" disabled selected>Selecione...</option>
+                </select>
+                <label for="municipio">Município</label>
             </div>
 
-            <!-- Unidade de Saúde -->
+            <!-- UBS -->
             <div class="md-text-field">
-                <input type="text" name="health_unit" id="health_unit" placeholder=" " required>
-                <label for="health_unit">Unidade de Saúde</label>
+                <input type="text" name="ubs" id="ubs" placeholder=" " required>
+                <label for="ubs">UBS</label>
             </div>
 
-            <!-- Território Atendido -->
+            <!-- Microárea -->
             <div class="md-text-field">
-                <input type="text" name="territory_served" id="territory_served" placeholder=" " required>
-                <label for="territory_served">Território Atendido</label>
+                <input type="text" name="microarea" id="microarea" placeholder=" " required>
+                <label for="microarea">Microárea</label>
+            </div>
+
+            <!-- CBO -->
+            <div class="md-text-field">
+                <input type="text" name="cbo" id="cbo" placeholder=" " required>
+                <label for="cbo">CBO (Classificação Brasileira de Ocupações)</label>
+            </div>
+
+            <!-- Simet / Código do Município -->
+            <div class="md-text-field">
+                <input type="text" name="simet_codigo_municipio" id="simet_codigo_municipio" placeholder=" " required>
+                <label for="simet_codigo_municipio">Simet / Código do Município</label>
             </div>
 
             <button type="submit" class="md-button filled">
@@ -111,4 +140,181 @@
         </form>
     </div>
 </div>
+
+<script>
+    // MASK FUNCTIONS
+    function maskCEP(v) {
+        v = v.replace(/\D/g, "");
+        if (v.length > 8) v = v.substring(0, 8);
+        v = v.replace(/^(\d{5})(\d)/, "$1-$2");
+        return v;
+    }
+
+    function maskPhone(v) {
+        v = v.replace(/\D/g, "");
+        if (v.length > 11) v = v.substring(0, 11);
+        if (v.length > 10) {
+            v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+        } else if (v.length > 5) {
+            v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+        } else if (v.length > 2) {
+            v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+        } else {
+            v = v.replace(/^(\d*)/, "($1");
+        }
+        return v;
+    }
+
+    document.getElementById('phone_number').addEventListener('input', function(e) {
+        e.target.value = maskPhone(e.target.value);
+    });
+
+    document.getElementById('cep').addEventListener('input', function(e) {
+        e.target.value = maskCEP(e.target.value);
+        const rawCep = e.target.value.replace(/\D/g, "");
+        if(rawCep.length === 8) {
+            lookupCEP(rawCep);
+        } else {
+            unlockAddressFields();
+        }
+    });
+
+    // VIACEP LOOKUP
+    async function lookupCEP(cep) {
+        const loading = document.getElementById('address-loading');
+        loading.style.display = 'block';
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const data = await response.json();
+            if(!data.erro) {
+                // Set State and then trigger City load
+                const stateSelect = document.getElementById('state');
+                stateSelect.value = data.uf;
+                await loadCities(data.uf);
+                document.getElementById('municipio').value = data.localidade;
+
+                // trigger change to update styling for state manually to avoid re-fetching
+                document.getElementById('state').classList.add('has-value');
+                document.getElementById('municipio').classList.add('has-value');
+                lockAddressFields();
+            }
+        } catch (err) {
+            console.error("CEP lookup failed", err);
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    function lockAddressFields() {
+        const fields = ['state', 'municipio'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.pointerEvents = 'none';
+                el.style.opacity = '0.7';
+                el.style.background = 'var(--md-sys-color-surface-variant)';
+            }
+        });
+    }
+
+    function unlockAddressFields() {
+        const fields = ['state', 'municipio'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.pointerEvents = 'auto';
+                el.style.opacity = '1';
+                el.style.background = 'white';
+            }
+        });
+    }
+
+    // IBGE API INTEGRATION
+    async function loadStates() {
+        const stateSelect = document.getElementById('state');
+        try {
+            const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+            const states = await response.json();
+            states.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.sigla;
+                opt.innerText = s.nome;
+                stateSelect.appendChild(opt);
+            });
+        } catch (e) { console.error("Error loading states", e); }
+    }
+
+    async function loadCities(uf) {
+        const citySelect = document.getElementById('municipio');
+        citySelect.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+        try {
+            const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+            const cities = await response.json();
+            citySelect.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            cities.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nome;
+                opt.innerText = c.nome;
+                citySelect.appendChild(opt);
+            });
+            // Update label styling in case it was pre-filled
+            citySelect.dispatchEvent(new Event('change'));
+        } catch (e) {
+            console.error("Error loading cities", e);
+            citySelect.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
+        }
+    }
+
+    document.getElementById('state').addEventListener('change', (e) => {
+        loadCities(e.target.value);
+    });
+
+    // AUTO-CEP FETCH
+    document.getElementById('municipio').addEventListener('change', async (e) => {
+        const city = e.target.value;
+        const state = document.getElementById('state').value;
+        const cepInput = document.getElementById('cep');
+        
+        // Only auto-fetch if CEP is empty
+        if(state && city && cepInput.value.length === 0) {
+            const loading = document.getElementById('address-loading');
+            loading.innerText = 'Buscando CEP da região...';
+            loading.style.display = 'block';
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${state}/${city}/Centro/json/`);
+                const data = await response.json();
+                
+                if(data && data.length > 0) {
+                    const genericCep = data[0].cep;
+                    cepInput.value = maskCEP(genericCep);
+                    
+                    // Ensure label floats up
+                    cepInput.focus();
+                    cepInput.blur();
+                    
+                    lockAddressFields();
+                }
+            } catch (err) {
+                console.error("Auto CEP fetch failed", err);
+            } finally {
+                loading.style.display = 'none';
+                loading.innerHTML = 'Buscando endereço... <span class="material-icons spin" style="font-size: 14px;">autorenew</span>';
+            }
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadStates();
+        // Select label animation helper
+        document.querySelectorAll('.md-text-field select').forEach(select => {
+            const updateLabel = () => {
+                if (select.value) select.classList.add('has-value');
+                else select.classList.remove('has-value');
+            };
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('blur', updateLabel);
+            updateLabel(); // Run on load
+        });
+    });
+</script>
 {% endblock %}

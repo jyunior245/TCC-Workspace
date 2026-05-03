@@ -43,10 +43,12 @@ def generate_report(patient_id):
     if 'user_id' not in session or session.get('user_type') != 'health_agent':
         return jsonify({"success": False, "message": "Acesso negado"}), 403
 
-    from datetime import date
+    from datetime import datetime, timezone, timedelta
     from app.models.daily_report import DailyReport
     
-    today = date.today()
+    # Fuso horário do Brasil para evitar virada prematura do dia no servidor UTC (Docker)
+    br_tz = timezone(timedelta(hours=-3))
+    today = datetime.now(br_tz).date()
     
     # Check if report already exists for today
     existing = DailyReport.query.filter_by(patient_id=patient_id, date=today).first()
@@ -66,6 +68,23 @@ def generate_report(patient_id):
 
     # Gera o relatório usando a IA
     report_content, status_message = ai_svc.generate_daily_report(patient_id)
+
+    if report_content:
+        return jsonify({"success": True, "message": status_message, "report": report_content})
+    else:
+        return jsonify({"success": False, "message": status_message})
+
+@agent_bp.route('/update_report/<patient_id>', methods=['POST'])
+def update_report(patient_id):
+    if 'user_id' not in session or session.get('user_type') != 'health_agent':
+        return jsonify({"success": False, "message": "Acesso negado"}), 403
+
+    agent_id = session['user_id']
+    patient = UserRepository.get_user_by_id(patient_id)
+    if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
+        return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
+
+    report_content, status_message = ai_svc.generate_daily_report(patient_id, update_existing=True)
 
     if report_content:
         return jsonify({"success": True, "message": status_message, "report": report_content})

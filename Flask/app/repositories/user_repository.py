@@ -80,8 +80,16 @@ class UserRepository:
     @staticmethod
     def create_agent_profile(user_id, data):
         try:
-            profile = HealthAgent(id=user_id, **data)
-            db.session.add(profile)
+            profile = HealthAgent.query.get(user_id)
+            if profile:
+                # Update existing profile
+                for key, value in data.items():
+                    setattr(profile, key, value)
+            else:
+                # Create new profile
+                profile = HealthAgent(id=user_id, **data)
+                db.session.add(profile)
+            
             # Também ativa o usuário
             user = User.query.get(user_id)
             if user:

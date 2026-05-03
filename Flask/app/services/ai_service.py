@@ -86,32 +86,75 @@ class HealthAgent:
         print(f"[AI][DEBUG] === FIM DO PROCESSAMENTO ({time.time() - start_total:.2f}s total) ===\n", flush=True)
         return response
 
-    def generate_daily_report(self, patient_id, target_date=None):
+    def generate_daily_report(self, patient_id, target_date=None, update_existing=False):
         """Gera um relatório diário das interações do paciente para o ACS visualizar"""
-        if not target_date:
-            target_date = date.today()
-
-        # Busca histórico do dia específico
-        start_of_day = datetime.combine(target_date, datetime.min.time())
-        end_of_day = datetime.combine(target_date, datetime.max.time())
+        from datetime import timezone, timedelta
+        br_tz = timezone(timedelta(hours=-3))
         
-        chats_today = ChatHistory.query.filter(
+        if not target_date:
+            target_date = datetime.now(br_tz).date()
+
+        # O banco de dados armazena em UTC. Precisamos definir os limites em UTC-3 e reverter para UTC
+        start_of_day_local = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=br_tz)
+        end_of_day_local = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=br_tz)
+        
+        start_of_day_utc = start_of_day_local.astimezone(timezone.utc).replace(tzinfo=None)
+        end_of_day_utc = end_of_day_local.astimezone(timezone.utc).replace(tzinfo=None)
+        
+        query = ChatHistory.query.filter(
             ChatHistory.user_id == patient_id,
-            ChatHistory.timestamp >= start_of_day,
-            ChatHistory.timestamp <= end_of_day
-        ).order_by(ChatHistory.timestamp.asc()).all()
+            ChatHistory.timestamp >= start_of_day_utc,
+            ChatHistory.timestamp <= end_of_day_utc
+        )
+        
+        existing_report = DailyReport.query.filter_by(patient_id=patient_id, date=target_date).first()
 
-        if not chats_today:
-            return None, "O paciente não teve interações com a IA neste dia."
+        if update_existing and existing_report:
+            # Busca apenas mensagens APÓS a última atualização do relatório
+            query = query.filter(ChatHistory.timestamp > existing_report.updated_at)
+            chats_today = query.order_by(ChatHistory.timestamp.asc()).all()
+            
+            if not chats_today:
+                return existing_report.content, "Não há novas mensagens para atualizar o relatório hoje."
+            
+            conversation_transcript = "\n".join([
+                f"[{c.timestamp.strftime('%H:%M')}] Paciente ({c.intent}): {c.message}\nIA: {c.response}\n" 
+                for c in chats_today
+            ])
+            
+            summary_prompt = f"""
+Você é um sistema de sumarização clínica para Agentes Comunitários de Saúde (ACS).
+Sua tarefa é ATUALIZAR o Relatório Diário do paciente.
 
-        # Transcreve a conversa
-        conversation_transcript = "\n".join([
-            f"[{c.timestamp.strftime('%H:%M')}] Paciente ({c.intent}): {c.message}\nIA: {c.response}\n" 
-            for c in chats_today
-        ])
+Abaixo você receberá o Relatório Atual e as Novas Conversas.
+Você deve REESCREVER o Relatório Atual incorporando as novas informações nas seções já existentes (ex: adicionando novos sintomas à lista de 'Sintomas Relatados', novos alertas em 'Alerta', etc).
 
-        # Prompt para sumarização clínica
-        summary_prompt = f"""
+REGRAS CRÍTICAS:
+1. NÃO crie seções como "Nova Informação", "Estrutura Adicional" ou "Nova Conversa". Apenas reescreva o relatório fundindo os dados orgânicamente no layout base original.
+2. NÃO transcreva e NÃO inclua trechos de diálogo ou o histórico da conversa no relatório final.
+3. Mantenha as informações antigas intactas, apenas ADICIONE os novos dados às categorias correspondentes. A única exceção é se o paciente afirmar que um problema passou (ex: "a dor parou").
+
+Relatório Atual:
+{existing_report.content}
+
+Novas Conversas:
+{conversation_transcript}
+
+Retorne APENAS o Relatório Diário completo reescrito:
+"""
+        else:
+            chats_today = query.order_by(ChatHistory.timestamp.asc()).all()
+            if not chats_today:
+                return None, "O paciente não teve interações com a IA neste dia."
+
+            # Transcreve a conversa completa
+            conversation_transcript = "\n".join([
+                f"[{c.timestamp.strftime('%H:%M')}] Paciente ({c.intent}): {c.message}\nIA: {c.response}\n" 
+                for c in chats_today
+            ])
+
+            # Prompt para sumarização clínica inicial
+            summary_prompt = f"""
 Você é um sistema de sumarização clínica projetado para ajudar Agentes Comunitários de Saúde (ACS).
 Analise o seguinte histórico de chat de um paciente hoje e crie um Relatório Diário conciso e estruturado.
 
@@ -148,60 +191,91 @@ Gere o Relatório Diário de Saúde agora:
 
     def update_patient_context(self, patient_id):
         """Resume o histórico recente do paciente em um dicionário estruturado e salva no banco de dados (Janela de Contexto)."""
-        chats = ChatHistory.query.filter_by(user_id=patient_id).order_by(ChatHistory.timestamp.asc()).all()
-        if not chats:
-            return None
+        existing_context = PatientContext.query.filter_by(patient_id=patient_id).first()
+        
+        # Lógica Incremental: Busca apenas mensagens enviadas após a última atualização
+        query = ChatHistory.query.filter_by(user_id=patient_id).order_by(ChatHistory.timestamp.asc())
+        if existing_context and existing_context.updated_at:
+            query = query.filter(ChatHistory.timestamp > existing_context.updated_at)
+            
+        new_chats = query.all()
+        
+        if not new_chats:
+            print(f"[AI CONTEXT] Sem novas mensagens para atualizar para o paciente {patient_id}.")
+            return existing_context.context_data if existing_context else None
+            
+        print(f"[AI CONTEXT][DEBUG] Processando {len(new_chats)} novas mensagens para o paciente {patient_id}.", flush=True)
         
         conversation_transcript = "\n".join([
             f"Paciente: {c.message}\nIA: {c.response}\n" 
-            for c in chats
+            for c in new_chats
         ])
+
+        current_json_str = "Nenhum histórico anterior."
+        if existing_context and existing_context.context_data:
+            current_json_str = json.dumps(existing_context.context_data, ensure_ascii=False, indent=2)
 
         summary_prompt = f"""
 Você é um sistema de auditoria e memória de longo prazo para um Agente de Saúde Inteligente.
-Sua tarefa é analisar todo o histórico de conversas do paciente e extrair um **JSON estruturado** com as informações vitais.
-Esse JSON será usado como a Janela de Contexto (Knowledge Base) para que o agente inteligente de saúde se lembre do paciente nas próximas conversas.
+Sua tarefa é analisar as NOVAS CONVERSAS do paciente e ATUALIZAR/FUNDIR as informações com o CONTEXTO ATUAL.
+Esse JSON será usado como a Janela de Contexto (Knowledge Base) para o agente.
 
-Histórico completo:
+Contexto Atual:
+{current_json_str}
+
+Novas Conversas:
 {conversation_transcript}
 
-INSTRUÇÃO OBRIGATÓRIA DE FORMATO:
-Você DEVE retornar APENAS um objeto JSON válido, sem nenhum outro texto antes ou depois. 
-IMPORTANTE: Use caracteres acentuados diretamente (ex: "cabeça", "paciência") no JSON, NÃO use sequências de escape unicode (ex: "\u00e7").
+INSTRUÇÃO OBRIGATÓRIA DE FORMATO E TAMANHO:
+Você DEVE retornar APENAS um objeto JSON válido.
+SEJA EXTREMAMENTE CONCISO E RÁPIDO. Use APENAS PALAVRAS-CHAVE curtas (máximo 2 a 3 palavras por item) nas listas.
+NÃO escreva frases longas ou explicações.
 Siga EXATAMENTE esta estrutura:
 {{
-  "nome_do_paciente": "Extrair se o paciente informou o nome, senão omitir ou null",
-  "data_ultima_conversa": "{date.today().isoformat()}",
-  "sintomas_relatados": ["Lista de sintomas extraídos", "..."],
-  "medicacoes_relatadas": ["Lista de medicações que o paciente disse tomar", "..."],
-  "acoes_recomendadas_pela_ia": ["Principais ações que a IA recomendou no passado"],
-  "observacoes_adicionais": "Observações relevantes, histórico social, etc"
+  "nome_do_paciente": "Apenas o Nome",
+  "sintomas_relatados": ["palavra-chave 1", "palavra-chave 2"],
+  "medicacoes_relatadas": ["remedio 1", "remedio 2"],
+  "acoes_recomendadas_pela_ia": ["acao 1", "acao 2"],
+  "observacoes_adicionais": "resumo extremamente curto"
 }}
 """
-        response_text = self._call_llama(summary_prompt).strip()
+        response_text = self._call_llama(summary_prompt, num_predict=250, temperature=0.1, json_format=True).strip()
+        print(f"[AI CONTEXT][DEBUG] Resposta JSON bruta do Ollama:\n{response_text}", flush=True)
+        
         try:
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            if start_idx != -1 and end_idx != -1:
-                json_str = response_text[start_idx:end_idx+1]
-                context_dict = json.loads(json_str)
-                
-                existing_context = PatientContext.query.filter_by(patient_id=patient_id).first()
-                if existing_context:
-                    existing_context.context_data = context_dict
-                    existing_context.updated_at = datetime.utcnow()
+            context_dict = json.loads(response_text)
+            
+            # Atualiza a data automaticamente via Python para precisão absoluta (UTC-3)
+            from datetime import timezone, timedelta
+            br_tz = timezone(timedelta(hours=-3))
+            context_dict["data_ultima_conversa"] = datetime.now(br_tz).date().isoformat()
+            
+            # Preenche o nome verdadeiro do paciente do banco (ignora a tentativa do Llama)
+            try:
+                from app.repositories.user_repository import UserRepository
+                user_obj = UserRepository.get_user_by_id(patient_id)
+                if user_obj and user_obj.name:
+                    context_dict["nome_do_paciente"] = user_obj.name
                 else:
-                    new_context = PatientContext(patient_id=patient_id, context_data=context_dict)
-                    db.session.add(new_context)
-                db.session.commit()
-                print(f"[AI CONTEXT] Contexto Atualizado com Sucesso para paciente {patient_id}.")
-                return context_dict
+                    context_dict["nome_do_paciente"] = "Paciente"
+            except Exception as e:
+                print(f"[AI CONTEXT] Aviso: falha ao buscar nome real do bd: {e}")
+            
+            print(f"[AI CONTEXT][DEBUG] JSON final consolidado e persistido no BD:\n{json.dumps(context_dict, ensure_ascii=False, indent=2)}", flush=True)
+            
+            if existing_context:
+                existing_context.context_data = context_dict
+                existing_context.updated_at = datetime.utcnow()
             else:
-                print(f"[AI CONTEXT ERROR] JSON não encontrado na resposta.")
+                new_context = PatientContext(patient_id=patient_id, context_data=context_dict)
+                db.session.add(new_context)
+            db.session.commit()
+            print(f"[AI CONTEXT] Contexto Atualizado com Sucesso (Incremental) para paciente {patient_id}.")
+            return context_dict
         except Exception as e:
             db.session.rollback()
             print(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}")
-        return None
+        return existing_context.context_data if existing_context else None
 
     def _classify_intent(self, message):
         """Classificação de intenção via Similaridade de Embeddings + Fallback Heurístico (Sub-segundo)"""
@@ -350,30 +424,23 @@ Histórico Recente de Relatórios do Paciente:
 
 JSON gerado:
 """
-        response_text = self._call_llama(triage_prompt).strip()
+        response_text = self._call_llama(triage_prompt, json_format=True).strip()
         
-        # Tentativa de extrair o JSON caso o Llama inclua texto em volta (ex: "Aqui está o JSON: ...")
         try:
-            # Encontra o primeiro { e o último }
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            if start_idx != -1 and end_idx != -1:
-                json_str = response_text[start_idx:end_idx+1]
-                triage_data = json.loads(json_str)
-                # Garante que as chaves existem
-                if "nivel" not in triage_data or "justificativa" not in triage_data:
-                    raise ValueError("Faltam chaves no JSON da triagem.")
-                    
-                # Padroniza nivel
-                nivel = str(triage_data["nivel"]).upper()
-                if "ALTA" in nivel: nivel = "ALTA"
-                elif "MÉDIA" in nivel or "MEDIA" in nivel: nivel = "MÉDIA"
-                else: nivel = "BAIXA"
+            triage_data = json.loads(response_text)
+            
+            # Garante que as chaves existem
+            if "nivel" not in triage_data or "justificativa" not in triage_data:
+                raise ValueError("Faltam chaves no JSON da triagem.")
                 
-                triage_data["nivel"] = nivel
-                return triage_data
-            else:
-                raise ValueError("Nenhum JSON encontrado na resposta da IA.")
+            # Padroniza nivel
+            nivel = str(triage_data["nivel"]).upper()
+            if "ALTA" in nivel: nivel = "ALTA"
+            elif "MÉDIA" in nivel or "MEDIA" in nivel: nivel = "MÉDIA"
+            else: nivel = "BAIXA"
+            
+            triage_data["nivel"] = nivel
+            return triage_data
         except json.JSONDecodeError as e:
             print(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text}")
             return {"nivel": "BAIXA", "justificativa": "Erro ao tentar ler o formato devolvido pela Inteligência Artificial. Recomendável ver os relatórios manualmente."}
@@ -401,6 +468,8 @@ JSON gerado:
                     if meds and isinstance(meds, list): bg_info += f"Medicamentos BD: {', '.join(meds)}. "
                     
                     if bg_info:
+                        # Limite rígido de caracteres para evitar estourar o prompt e travar a latência (Prompt Eval Time) do LLM
+                        bg_info = bg_info[:400]
                         system_rules += f" [{bg_info}]"
             except Exception as e:
                 print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
@@ -458,7 +527,7 @@ JSON gerado:
         except:
             return "O serviço de análise médica profunda está offline no momento."
 
-    def _call_llama(self, prompt, num_predict=None, temperature=None):
+    def _call_llama(self, prompt, num_predict=None, temperature=None, json_format=False):
         payload = {
             "model": self.llama_model, 
             "prompt": prompt, 
@@ -466,6 +535,9 @@ JSON gerado:
             "keep_alive": "15m" # Mantém o modelo na memória por 15 min
         }
         
+        if json_format:
+            payload["format"] = "json"
+            
         # Adiciona opções de performance
         options = {}
         if num_predict: options["num_predict"] = num_predict
@@ -474,6 +546,8 @@ JSON gerado:
 
         try:
             res = requests.post(self.ollama_url, json=payload, timeout=90)
+            if res.status_code != 200:
+                print(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}")
             return res.json().get("response", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
             print(f"Erro no Llama: {e}")
@@ -493,6 +567,8 @@ JSON gerado:
         }
         try:
             res = requests.post(chat_url, json=payload, timeout=90)
+            if res.status_code != 200:
+                print(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}")
             return res.json().get("message", {}).get("content", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
             print(f"Erro no Llama Chat: {e}")

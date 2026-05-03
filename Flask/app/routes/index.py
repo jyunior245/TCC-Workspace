@@ -190,12 +190,15 @@ def complete_registration():
                 
             elif user_type == 'health_agent':
                 data = {
-                    'professional_training': request.form.get('professional_training'),
-                    'institutional_link': request.form.get('institutional_link'),
-                    'area_of_activity': request.form.get('area_of_activity'),
-                    'service_time': request.form.get('service_time'),
-                    'health_unit': request.form.get('health_unit'),
-                    'territory_served': request.form.get('territory_served')
+                    'gender': request.form.get('gender'),
+                    'phone_number': request.form.get('phone_number'),
+                    'cep': request.form.get('cep'),
+                    'state': request.form.get('state'),
+                    'municipio': request.form.get('municipio'),
+                    'ubs': request.form.get('ubs'),
+                    'microarea': request.form.get('microarea'),
+                    'cbo': request.form.get('cbo'),
+                    'simet_codigo_municipio': request.form.get('simet_codigo_municipio')
                 }
                 
                 if 'temp_reg' in session:
@@ -213,6 +216,7 @@ def complete_registration():
                     except Exception as creation_err:
                         raise creation_err
                 
+                print(f"[DEBUG] Criando perfil de ACS para user_id: {user_id}")
                 UserRepository.create_agent_profile(user_id, data)
             
             flash("Cadastro concluído com sucesso!")
@@ -243,7 +247,9 @@ def complete_registration():
                 session.pop('user_name', None)
             
             flash(f"Erro ao salvar dados complementares: {str(e)}")
-            print(f"Completion error: {e}")
+            print(f"Completion error: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     # Renderiza o template apropriado com base no tipo de usuário
     if user_type == 'patient':

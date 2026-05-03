@@ -4,12 +4,15 @@ class HealthAgent(db.Model):
     __tablename__ = 'health_agents'
 
     id = db.Column(db.String(128), db.ForeignKey('users.id'), primary_key=True)
-    professional_training = db.Column(db.String(100))
-    institutional_link = db.Column(db.String(100))
-    area_of_activity = db.Column(db.String(100))
-    service_time = db.Column(db.String(50))
-    health_unit = db.Column(db.String(100))
-    territory_served = db.Column(db.String(100))
+    gender = db.Column(db.String(20), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    cep = db.Column(db.String(20), nullable=False)
+    state = db.Column(db.String(2), nullable=False)
+    municipio = db.Column(db.String(100), nullable=False)
+    ubs = db.Column(db.String(100), nullable=False)
+    microarea = db.Column(db.String(50), nullable=False)
+    cbo = db.Column(db.String(50), nullable=False)
+    simet_codigo_municipio = db.Column(db.String(50), nullable=False)
 
     user = db.relationship('User', backref=db.backref('agent_profile', uselist=False))
 

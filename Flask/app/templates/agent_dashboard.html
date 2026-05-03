@@ -259,9 +259,15 @@
             } else if (data.already_exists) {
                 modalTitle.innerText = `Relatório já existente: ${name}`;
                 modalBody.innerHTML = `
-                    <div style="background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
-                        <span class="material-icons-outlined">info</span>
-                        <span>${data.message}</span>
+                    <div style="background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="material-icons-outlined">info</span>
+                            <span>${data.message}</span>
+                        </div>
+                        <button class="md-button filled" onclick="updateReportNow('${patientId}', '${name}')">
+                            <span class="material-icons-outlined">update</span>
+                            Atualizar
+                        </button>
                     </div>
                     ${marked.parse(data.report)}
                 `;
@@ -272,6 +278,36 @@
             loader.style.display = 'none';
             content.style.display = 'block';
             modalBody.innerHTML = '<p>Erro de conexão ao gerar relatório.</p>';
+        }
+    }
+
+    async function updateReportNow(patientId, name) {
+        modalTitle.innerText = `Atualizando Resumo: ${name}`;
+        modalBody.innerHTML = '';
+        loader.style.display = 'flex';
+        content.style.display = 'none';
+
+        try {
+            const response = await fetch(`/agent/update_report/${patientId}`, { method: 'POST' });
+            const data = await response.json();
+            loader.style.display = 'none';
+            content.style.display = 'block';
+            if (data.success) {
+                modalTitle.innerText = `Resumo Atualizado: ${name}`;
+                modalBody.innerHTML = `
+                    <div style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                        <span class="material-icons-outlined">check_circle</span>
+                        <span>Relatório atualizado com as últimas mensagens!</span>
+                    </div>
+                    ${marked.parse(data.report)}
+                `;
+            } else {
+                modalBody.innerHTML = `<p style="color: var(--md-sys-color-error);">${data.message}</p>`;
+            }
+        } catch (e) {
+            loader.style.display = 'none';
+            content.style.display = 'block';
+            modalBody.innerHTML = '<p>Erro de conexão ao atualizar relatório.</p>';
         }
     }
 
