@@ -204,16 +204,30 @@ Gere o Relatório Diário de Saúde agora:
             print(f"[AI CONTEXT] Sem novas mensagens para atualizar para o paciente {patient_id}.")
             return existing_context.context_data if existing_context else None
             
+        # Limita a 15 interações mais recentes para evitar estouro do prompt
+        if len(new_chats) > 15:
+            new_chats = new_chats[-15:]
+            
         print(f"[AI CONTEXT][DEBUG] Processando {len(new_chats)} novas mensagens para o paciente {patient_id}.", flush=True)
         
         conversation_transcript = "\n".join([
             f"Paciente: {c.message}\nIA: {c.response}\n" 
             for c in new_chats
         ])
+        
+        # Trunca para limite máximo absoluto de 3000 caracteres (safety net)
+        conversation_transcript = conversation_transcript[-3000:]
 
         current_json_str = "Nenhum histórico anterior."
         if existing_context and existing_context.context_data:
-            current_json_str = json.dumps(existing_context.context_data, ensure_ascii=False, indent=2)
+            # Limita as listas para não crescerem ao infinito
+            truncated_data = dict(existing_context.context_data)
+            if "sintomas_relatados" in truncated_data and isinstance(truncated_data["sintomas_relatados"], list):
+                truncated_data["sintomas_relatados"] = truncated_data["sintomas_relatados"][-5:]
+            if "medicacoes_relatadas" in truncated_data and isinstance(truncated_data["medicacoes_relatadas"], list):
+                truncated_data["medicacoes_relatadas"] = truncated_data["medicacoes_relatadas"][-5:]
+                
+            current_json_str = json.dumps(truncated_data, ensure_ascii=False, indent=2)[:1500]
 
         summary_prompt = f"""
 Você é um sistema de auditoria e memória de longo prazo para um Agente de Saúde Inteligente.
@@ -239,10 +253,15 @@ Siga EXATAMENTE esta estrutura:
   "observacoes_adicionais": "resumo extremamente curto"
 }}
 """
-        response_text = self._call_llama(summary_prompt, num_predict=250, temperature=0.1, json_format=True).strip()
+        response_text = self._call_llama(summary_prompt, num_predict=500, temperature=0.1, json_format=True).strip()
         print(f"[AI CONTEXT][DEBUG] Resposta JSON bruta do Ollama:\n{response_text}", flush=True)
         
         try:
+            import re
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                response_text = json_match.group(0)
+            
             context_dict = json.loads(response_text)
             
             # Atualiza a data automaticamente via Python para precisão absoluta (UTC-3)
@@ -461,16 +480,27 @@ JSON gerado:
                     nome = kb_data.get("nome_do_paciente")
                     sint = kb_data.get("sintomas_relatados", [])
                     meds = kb_data.get("medicacoes_relatadas", [])
+                    acoes = kb_data.get("acoes_recomendadas_pela_ia", [])
+                    obs = kb_data.get("observacoes_adicionais")
                     
                     bg_info = ""
                     if nome and nome != "null": bg_info += f"Paciente: {nome}. "
-                    if sint and isinstance(sint, list): bg_info += f"Sintomas BD: {', '.join(sint)}. "
-                    if meds and isinstance(meds, list): bg_info += f"Medicamentos BD: {', '.join(meds)}. "
+                    
+                    # Injeção condicional pesada (só em intents de saúde)
+                    if intent in ("HEALTH_QUERY", "EMERGENCY"):
+                        if sint and isinstance(sint, list): bg_info += f"Sintomas Recentes (BD): {', '.join(sint)}. "
+                        if meds and isinstance(meds, list): bg_info += f"Medicações (BD): {', '.join(meds)}. "
+                        if acoes and isinstance(acoes, list): bg_info += f"IA Recomendou: {', '.join(acoes)}. "
+                        if obs and obs != "null": bg_info += f"Obs: {obs}. "
+                        
+                        # Verifica staleness (TTL de 15 dias)
+                        if user_context.updated_at:
+                            dias_desde_atualizacao = (datetime.utcnow() - user_context.updated_at).days
+                            if dias_desde_atualizacao > 15:
+                                bg_info += f"[ATENÇÃO: Este contexto clínico tem {dias_desde_atualizacao} dias de atraso e pode estar desatualizado.] "
                     
                     if bg_info:
-                        # Limite rígido de caracteres para evitar estourar o prompt e travar a latência (Prompt Eval Time) do LLM
-                        bg_info = bg_info[:400]
-                        system_rules += f" [{bg_info}]"
+                        system_rules += f" [{bg_info.strip()}]"
             except Exception as e:
                 print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
 

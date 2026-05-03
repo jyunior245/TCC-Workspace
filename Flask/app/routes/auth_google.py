@@ -43,15 +43,6 @@ def callback():
                 return redirect(url_for('register.complete_registration'))
             
             if user.user_type == 'patient':
-                # Dispara atualização da base de conhecimento (KB) em background
-                from flask import current_app
-                app_obj = current_app._get_current_object()
-                def update_kb():
-                    with app_obj.app_context():
-                        print(f"[GOOGLE LOGIN] Atualizando KB em background para o paciente {user.id}...")
-                        agent.update_patient_context(user.id)
-                
-                threading.Thread(target=update_kb, daemon=True).start()
                 return redirect(url_for('patient.dashboard'))
             elif user.user_type == 'health_agent':
                 return redirect(url_for('agent.dashboard'))

@@ -159,22 +159,6 @@ def end_chat():
 
     user_id = session.get('user_id')
     
-    # Executa a atualização do contexto assincronamente (em uma thread) 
-    # para não travar a UI (pois consulta o LLM na summarização)
-    def run_context_update():
-        print(f"[CHAT END] Iniciando atualização de janela de contexto para user={user_id}...")
-        try:
-            from app.extensions.sql_alchemy import app # Precisamos do context da app principal para DB
-        except ImportError:
-            pass
-            
-        with db.session.begin_nested() if db.session.is_active else db.session.begin():
-            pass
-        # Aqui, como rodamos no background, precisamos do active app_context
-        # Mas `flask_current_app` não pode ser acessada em nova Thread sem injetar.
-        # Então, como solução SIMPLES para o TCC, podemos chamar de forma SÍNCRONA,
-        # ou, recuperar a APP via current_app antes de criar a thread.
-        
     # Recupenrando o app para ser invocado na thread
     from flask import current_app
     app = current_app._get_current_object()

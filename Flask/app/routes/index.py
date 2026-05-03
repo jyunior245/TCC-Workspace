@@ -36,15 +36,6 @@ def login():
                     return redirect(url_for('register.complete_registration'))
 
                 if user_data.user_type == 'patient':
-                    # Dispara atualização da base de conhecimento (KB) em background para estar pronto no chat
-                    from flask import current_app
-                    app_obj = current_app._get_current_object()
-                    def update_kb():
-                        with app_obj.app_context():
-                            print(f"[LOGIN] Atualizando KB em background para o paciente {user_id}...")
-                            agent.update_patient_context(user_id)
-                    
-                    threading.Thread(target=update_kb, daemon=True).start()
                     return redirect(url_for('patient.dashboard'))
                 elif user_data.user_type == 'health_agent':
                     return redirect(url_for('agent.dashboard'))
