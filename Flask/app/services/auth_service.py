@@ -81,6 +81,20 @@ class AuthService:
             print(f"Failed to rollback Firebase user: {e}")
 
     @staticmethod
+    def admin_update_user_email(uid, new_email):
+        """Updates a user's email directly via Admin SDK without requiring old password/re-auth."""
+        try:
+            from app.extensions.firebase_config import auth_admin
+            if auth_admin:
+                auth_admin.update_user(uid, email=new_email)
+                return True
+            else:
+                raise Exception("Admin SDK not configured for user update.")
+        except Exception as e:
+            error_msg = AuthService._parse_firebase_error(e)
+            raise Exception(f"Erro ao atualizar e-mail no Firebase: {error_msg}")
+
+    @staticmethod
     def admin_update_user_password(uid, new_password):
         """Updates a user's password directly via Admin SDK without requiring old password."""
         try:
@@ -105,6 +119,101 @@ class AuthService:
             else:
                 raise Exception("Admin SDK not configured for user deletion.")
         except Exception as e:
-            error_msg = AuthService._parse_firebase_error(e)
             raise Exception(f"Erro ao excluir conta do Firebase: {error_msg}")
 
+    @staticmethod
+    def send_verification_for_new_email(uid, new_email):
+        """
+        Gera um token customizado, troca por um idToken via REST API e dispara
+        o processo VERIFY_AND_CHANGE_EMAIL do Firebase para enviar um e-mail de
+        confirmação ao novo endereço. O e-mail só será alterado quando o usuário
+        clicar no link.
+        """
+        import os
+        import requests
+        from app.extensions.firebase_config import auth_admin
+        
+        try:
+            if not auth_admin:
+                raise Exception("Admin SDK not configured.")
+
+            # 1. Gerar Custom Token para o usuário atual
+            custom_token = auth_admin.create_custom_token(uid).decode('utf-8')
+            api_key = os.getenv("FIREBASE_API_KEY")
+            
+            if not api_key:
+                raise Exception("FIREBASE_API_KEY não configurada no ambiente.")
+
+            # 2. Trocar Custom Token por ID Token
+            res = requests.post(
+                f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key={api_key}",
+                json={"token": custom_token, "returnSecureToken": True}
+            )
+            
+            if res.status_code != 200:
+                raise Exception(f"Falha ao obter ID Token: {res.text}")
+                
+            id_token = res.json().get('idToken')
+
+            # 3. Disparar VERIFY_AND_CHANGE_EMAIL
+            res_verify = requests.post(
+                f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}",
+                json={
+                    "requestType": "VERIFY_AND_CHANGE_EMAIL",
+                    "idToken": id_token,
+                    "newEmail": new_email
+                }
+            )
+            
+            if res_verify.status_code != 200:
+                raise Exception(f"Falha ao enviar e-mail de verificação: {res_verify.text}")
+                
+            return True
+            
+        except Exception as e:
+            raise Exception(f"Erro no fluxo de verificação de e-mail: {str(e)}")
+
+    @staticmethod
+    def send_initial_verification_email(uid):
+        """
+        Envia o e-mail de verificação inicial para a conta recém-criada (VERIFY_EMAIL).
+        """
+        import os
+        import requests
+        from app.extensions.firebase_config import auth_admin
+        
+        try:
+            if not auth_admin:
+                raise Exception("Admin SDK not configured.")
+
+            custom_token = auth_admin.create_custom_token(uid).decode('utf-8')
+            api_key = os.getenv("FIREBASE_API_KEY")
+            
+            if not api_key:
+                raise Exception("FIREBASE_API_KEY não configurada no ambiente.")
+
+            res = requests.post(
+                f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key={api_key}",
+                json={"token": custom_token, "returnSecureToken": True}
+            )
+            
+            if res.status_code != 200:
+                raise Exception(f"Falha ao obter ID Token: {res.text}")
+                
+            id_token = res.json().get('idToken')
+
+            res_verify = requests.post(
+                f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}",
+                json={
+                    "requestType": "VERIFY_EMAIL",
+                    "idToken": id_token
+                }
+            )
+            
+            if res_verify.status_code != 200:
+                raise Exception(f"Falha ao enviar e-mail de verificação: {res_verify.text}")
+                
+            return True
+            
+        except Exception as e:
+            raise Exception(f"Erro no fluxo de verificação de e-mail inicial: {str(e)}")

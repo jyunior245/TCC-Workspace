@@ -181,14 +181,34 @@ def complete_registration():
                 print(f"[DEBUG] Criando perfil de ACS para user_id: {user_id}")
                 UserRepository.create_agent_profile(user_id, data)
             
-            flash("Cadastro concluído com sucesso!")
+            # Verifica se o e-mail foi confirmado
+            from app.extensions.firebase_config import auth_admin
+            from app.extensions.sql_alchemy import db
+            from app.models.user import User
             
-            # Redireciona para o dashboard do usuário
-            session['is_active'] = True
-            if user_type == 'patient':
-                return redirect(url_for('patient.dashboard'))
-            elif user_type == 'health_agent':
-                return redirect(url_for('agent.dashboard'))
+            firebase_user = auth_admin.get_user(user_id)
+            is_pseudo_email = firebase_user.email and firebase_user.email.endswith('@tcchealth.com')
+            
+            if not is_pseudo_email and not firebase_user.email_verified:
+                # Reverte a ativação que ocorreu na criação do perfil
+                user = User.query.get(user_id)
+                if user:
+                    user.is_active = False
+                    db.session.commit()
+                
+                session['is_active'] = False
+                flash("Cadastro salvo! Por favor, verifique seu e-mail para continuar.")
+                
+                if user_type in ['patient', 'health_agent']:
+                    return redirect(url_for('register.verify_pending'))
+            else:
+                session['is_active'] = True
+                flash("Cadastro concluído com sucesso!")
+                
+                if user_type == 'patient':
+                    return redirect(url_for('patient.dashboard'))
+                elif user_type == 'health_agent':
+                    return redirect(url_for('agent.dashboard'))
 
         except Exception as e:
             flash(f"Erro ao salvar dados complementares: {str(e)}", "error")
@@ -196,13 +216,109 @@ def complete_registration():
             import traceback
             traceback.print_exc()
 
-    # Renderiza o template apropriado com base no tipo de usuário
+    # Checa se o usuário já preencheu o perfil, mas falta verificar e-mail
+    user_id = session.get('user_id')
+    user = None
+    if user_id:
+        from app.models.user import User
+        user = User.query.get(user_id)
+        
+    profile_exists = False
+    if user:
+        if user_type == 'patient' and user.patient_profile:
+            profile_exists = True
+        elif user_type == 'health_agent' and user.agent_profile:
+            profile_exists = True
+
+    if profile_exists and not user.is_active:
+        from app.extensions.firebase_config import auth_admin
+        firebase_user = auth_admin.get_user(user_id)
+        if not firebase_user.email_verified:
+            if user_type in ['patient', 'health_agent']:
+                return redirect(url_for('register.verify_pending'))
+        else:
+            # Já verificou, ativa e vai pro painel
+            user.is_active = True
+            from app.extensions.sql_alchemy import db
+            db.session.commit()
+            session['is_active'] = True
+            if user_type == 'patient':
+                return redirect(url_for('patient.dashboard'))
+            elif user_type == 'health_agent':
+                return redirect(url_for('agent.dashboard'))
+
+    # Renderiza o template apropriado com base no tipo de usuário (primeira vez)
     if user_type == 'patient':
         return render_template('register_patient_complete.html')
     elif user_type == 'health_agent':
         return render_template('register_agent_complete.html')
     else:
         return redirect(url_for('index.index'))
+
+@register_bp.route('/verify_pending', methods=['GET'])
+@login_required
+def verify_pending():
+    user_id = session.get('user_id')
+    user_type = session.get('user_type')
+    
+    from app.extensions.firebase_config import auth_admin
+    from app.models.user import User
+    
+    firebase_user = auth_admin.get_user(user_id)
+    is_pseudo_email = firebase_user.email and firebase_user.email.endswith('@tcchealth.com')
+    
+    if is_pseudo_email or firebase_user.email_verified:
+        # Se já tiver verificado, joga pro painel
+        user = User.query.get(user_id)
+        if user:
+            user.is_active = True
+            from app.extensions.sql_alchemy import db
+            db.session.commit()
+        session['is_active'] = True
+        
+        if user_type == 'patient':
+            return redirect(url_for('patient.dashboard'))
+        elif user_type == 'health_agent':
+            return redirect(url_for('agent.dashboard'))
+        else:
+            return redirect(url_for('index.index'))
+
+    return render_template('verify_pending.html', email_to_verify=firebase_user.email)
+
+@register_bp.route('/send_registration_verification', methods=['POST'])
+@login_required
+def send_registration_verification():
+    user_id = session.get('user_id')
+    try:
+        AuthService.send_initial_verification_email(user_id)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        print(f"Erro ao enviar email de verificação: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@register_bp.route('/check_registration_verification', methods=['GET'])
+@login_required
+def check_registration_verification():
+    user_id = session.get('user_id')
+    try:
+        from app.extensions.firebase_config import auth_admin
+        from app.extensions.sql_alchemy import db
+        from app.models.user import User
+        
+        firebase_user = auth_admin.get_user(user_id)
+        if firebase_user.email_verified:
+            # Ativa o usuário
+            user = User.query.get(user_id)
+            if user:
+                user.is_active = True
+                db.session.commit()
+            session['is_active'] = True
+            return jsonify({'verified': True})
+            
+    except Exception as e:
+        print(f"Erro ao verificar email: {e}")
+        
+    return jsonify({'verified': False})
 
 @login_bp.route('/logout')
 def logout():

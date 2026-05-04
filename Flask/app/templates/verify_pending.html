@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Confirme seu E-mail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <!-- Fundo Exclusivo -->
+    <div class="register-exclusive-bg">
+        <div class="dna-container">
+            <svg class="dna-strand" viewBox="0 0 2000 300" preserveAspectRatio="none">
+                <defs>
+                    <pattern id="dna-pattern" x="0" y="0" width="250" height="300" patternUnits="userSpaceOnUse">
+                        <line x1="125" y1="50" x2="125" y2="250" class="dna-rung" />
+                        <line x1="62" y1="100" x2="62" y2="200" class="dna-rung" />
+                        <line x1="187" y1="100" x2="187" y2="200" class="dna-rung" />
+                    </pattern>
+                </defs>
+                <path class="dna-path dna-1" d="M0,150 C100,50 150,50 250,150 C350,250 400,250 500,150 C600,50 650,50 750,150 C850,250 900,250 1000,150 L2000,150" />
+                <path class="dna-path dna-2" d="M0,150 C100,250 150,250 250,150 C350,50 400,50 500,150 C600,250 650,250 750,150 C850,50 900,50 1000,150 L2000,150" />
+            </svg>
+        </div>
+    </div>
+
+    <div class="auth-card" style="max-width: 500px; text-align: center; padding: 40px 24px;">
+        <span class="material-icons-outlined spin" style="font-size: 64px; color: var(--md-sys-color-primary); margin-bottom: 24px; display: inline-block;">hourglass_empty</span>
+        
+        <h2 class="headline-large" style="margin-bottom: 16px;">Falta pouco!</h2>
+        <h3 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 500; color: var(--md-sys-color-on-surface);">Confirme seu E-mail</h3>
+        
+        <p style="margin: 0 0 16px 0; font-size: 16px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;">
+            Sua conta foi criada, mas está inativa. Para garantir a segurança, enviamos um link de verificação para:<br>
+            <strong style="color: var(--md-sys-color-primary); display: block; margin-top: 8px; font-size: 18px;">{{ email_to_verify }}</strong>
+        </p>
+        
+        <div style="margin-top: 32px; padding: 16px; background: var(--md-sys-color-surface-variant); border-radius: 12px;">
+            <p style="margin: 0; font-size: 14px; color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span class="material-icons-outlined" style="font-size: 18px;">mail</span>
+                Acesse sua caixa de entrada e clique no link.
+            </p>
+            <p style="margin: 8px 0 0 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8;">
+                Esta página será redirecionada automaticamente assim que a verificação for detectada.
+            </p>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <a href="{{ url_for('login.logout') }}" style="color: var(--md-sys-color-primary); text-decoration: none; font-size: 14px; font-weight: 500;">
+                Sair e voltar depois
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Dispara o envio do e-mail
+        fetch('/send_registration_verification', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => console.log("Email verification requested:", data));
+        
+        // Polling para checar se o usuário clicou no link
+        const pollInterval = setInterval(() => {
+            fetch('/check_registration_verification')
+            .then(res => res.json())
+            .then(data => {
+                if(data.verified) {
+                    clearInterval(pollInterval);
+                    window.location.reload(); // Vai recarregar e o index.py mandará para o dashboard
+                }
+            })
+            .catch(err => console.log("Polling error:", err));
+        }, 3000);
+    });
+</script>
+{% endblock %}

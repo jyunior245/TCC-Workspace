@@ -37,6 +37,19 @@ class UserRepository:
         return None
 
     @staticmethod
+    def update_user_email(user_id, new_email):
+        try:
+            user = User.query.get(user_id)
+            if user:
+                user.email = new_email
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Erro ao atualizar e-mail no banco: {str(e)}")
+
+    @staticmethod
     def _generate_patient_code(length=6):
         import random
         import string

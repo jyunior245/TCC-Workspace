@@ -84,9 +84,14 @@
             </div>
 
             <!-- Email -->
-            <div class="md-text-field">
+            <div class="md-text-field" style="margin-bottom: 8px;">
                 <input type="email" name="email" id="email" placeholder=" " required>
                 <label for="email">E-mail</label>
+            </div>
+            <div style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: flex-end;">
+                <button type="button" class="domain-btn" onclick="appendDomain('@gmail.com')">@gmail.com</button>
+                <button type="button" class="domain-btn" onclick="appendDomain('@outlook.com')">@outlook.com</button>
+                <button type="button" class="domain-btn" onclick="appendDomain('@hotmail.com')">@hotmail.com</button>
             </div>
 
             <!-- Senha -->
@@ -139,4 +144,28 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/password_meter.js') }}"></script>
 <script src="{{ url_for('static', filename='js/voice_nav.js') }}"></script>
+<script>
+function appendDomain(domain) {
+    const input = document.getElementById('email');
+    let val = input.value;
+    if (val.includes('@')) {
+        val = val.split('@')[0];
+    }
+    input.value = val + domain;
+    input.focus();
+}
+</script>
+<style>
+.domain-btn {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border: none;
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+</style>
 {% endblock %}

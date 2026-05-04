@@ -76,28 +76,46 @@
             <div id="patients-section" class="dashboard-section">
                 <!-- Link Patient Section -->
                 <section class="section">
-                    <div class="md-card elevated">
-                        <h2 class="card-title">
-                            <span class="material-icons-outlined">person_add</span>
-                            Vincular Novo Paciente
-                        </h2>
-                        <p class="body-medium" style="margin-bottom: 24px; color: var(--md-sys-color-on-surface-variant);">
-                            Insira o código de 6 dígitos que o paciente gerou no aplicativo dele.
-                        </p>
-                        
-                        <form action="{{ url_for('agent.link_patient') }}" method="POST" class="link-patient-form">
-                            <div class="md-text-field">
-                                <input type="text" name="patient_code" id="patient_code" placeholder=" " required maxlength="6" style="text-transform: uppercase;">
-                                <label for="patient_code">Código do Paciente</label>
+                    <div class="md-card elevated" style="max-width: 100%;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: space-between;">
+                            
+                            <!-- Vincular via Código -->
+                            <div style="flex: 1; min-width: 300px;">
+                                <h2 class="card-title">
+                                    <span class="material-icons-outlined">person_add</span>
+                                    Vincular Paciente Existente
+                                </h2>
+                                <p class="body-medium" style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                                    Insira o código de 6 dígitos gerado pelo paciente.
+                                </p>
+                                <form action="{{ url_for('agent.link_patient') }}" method="POST" class="link-patient-form" style="display: flex; gap: 12px; align-items: flex-start;">
+                                    <div class="md-text-field" style="flex: 1; margin-bottom: 0;">
+                                        <input type="text" name="patient_code" id="patient_code" placeholder=" " required maxlength="6" style="text-transform: uppercase;">
+                                        <label for="patient_code">Código do Paciente</label>
+                                    </div>
+                                    <button type="submit" class="md-button filled" style="height: 56px;">
+                                        Vincular
+                                    </button>
+                                </form>
                             </div>
-                            <button type="submit" class="md-button filled">
-                                <span class="material-icons-outlined">link</span>
-                                Vincular Paciente
-                            </button>
-                        </form>
+
+                            <!-- Modo Assistência -->
+                            <div style="flex: 1; min-width: 300px; padding-left: 24px; border-left: 1px solid var(--md-sys-color-surface-variant);">
+                                <h2 class="card-title" style="color: var(--md-sys-color-primary);">
+                                    <span class="material-icons-outlined">assignment_ind</span>
+                                    Modo de Assistência
+                                </h2>
+                                <p class="body-medium" style="margin-bottom: 16px; color: var(--md-sys-color-on-surface-variant);">
+                                    O paciente não tem celular? Preencha o cadastro junto com ele agora mesmo.
+                                </p>
+                                <a href="{{ url_for('agent.register_assisted') }}" class="md-button outlined" style="width: 100%; height: 56px;">
+                                    Cadastrar Novo Paciente
+                                </a>
+                            </div>
+
+                        </div>
                     </div>
                 </section>
-
                 <!-- Patients List Section -->
                 <section class="section">
                     <h2 class="title-large" style="margin-bottom: 16px; font-weight: 400;">Meus Pacientes ({{ patients|length }})</h2>

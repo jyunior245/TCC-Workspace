@@ -56,6 +56,57 @@
         </div>
       </div>
     </header>
+    {% if is_pseudo_email %}
+    <style>
+        .original-banner-wrapper {
+            background-color: var(--md-sys-color-error-container);
+            color: var(--md-sys-color-on-error-container);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 16px 16px 0 16px;
+            border-radius: 12px;
+        }
+        .original-banner-btn {
+            background-color: var(--md-sys-color-error);
+            color: var(--md-sys-color-on-error);
+            flex-shrink: 0;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            padding: 0 24px;
+            font-weight: 500;
+            cursor: pointer;
+            width: fit-content; /* CORRIGE O PROBLEMA DO BOTÃO ESTICADO (BARRA VERMELHA) */
+            min-width: max-content;
+            transition: opacity 0.2s;
+        }
+        .original-banner-btn:hover { opacity: 0.9; }
+        
+        @media (max-width: 768px) {
+            .original-banner-wrapper {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px 16px;
+            }
+            .original-banner-wrapper > div { flex-direction: column; }
+        }
+    </style>
+    <div id="pseudo-email-banner" class="original-banner-wrapper">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="material-icons-outlined" style="color: var(--md-sys-color-error);">warning</span>
+            <div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 500;">Cadastro Incompleto</h3>
+                <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.9;">Adicione um e-mail verdadeiro para receber notificações e garantir o acesso à sua conta.</p>
+            </div>
+        </div>
+        <button class="original-banner-btn" onclick="openEmailUpdateModal()">
+            Atualizar E-mail
+        </button>
+    </div>
+    {% endif %}
 
     <main class="tabs-container" role="main">
       <section class="tabs-content">
@@ -215,6 +266,37 @@
   </div>
 </div>
 
+<!-- Modal de Atualização de E-mail -->
+<div class="settings-overlay" id="emailUpdateModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Atualizar E-mail">
+  <div class="settings-card" style="max-width: 440px;">
+    <div class="settings-header" style="background: var(--md-sys-color-primary-container); border: none;">
+      <h2 class="title-large" style="margin: 0; font-weight: 600; color: var(--md-sys-color-on-primary-container);">Segurança da Conta</h2>
+      <button class="icon-button modal-close" onclick="closeEmailUpdateModal()" aria-label="Fechar">
+        <span class="material-icons-outlined">close</span>
+      </button>
+    </div>
+    <div class="settings-content" style="padding-top: 16px;">
+        <p class="body-medium" style="margin-bottom: 24px;">Insira seu endereço de e-mail verdadeiro. Ele será usado para recuperar sua conta e enviar relatórios.</p>
+        
+        <div class="md-text-field" style="position: relative; margin-bottom: 16px; width: 100%;">
+            <input type="email" id="newEmailInput" placeholder=" " required style="width: 100%; height: 56px; border: 2px solid #79747e; border-radius: 4px; padding: 0 16px; font-size: 16px; outline: none; box-sizing: border-box;">
+            <label for="newEmailInput" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: white; padding: 0 4px; color: #49454f; pointer-events: none; transition: all 0.2s;">Novo E-mail</label>
+        </div>
+        
+        <!-- Domain Assistant -->
+        <div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
+            <button class="domain-btn" onclick="appendDomain('@gmail.com')">@gmail.com</button>
+            <button class="domain-btn" onclick="appendDomain('@outlook.com')">@outlook.com</button>
+            <button class="domain-btn" onclick="appendDomain('@hotmail.com')">@hotmail.com</button>
+        </div>
+
+        <button class="md-button filled" onclick="submitEmailUpdate()" id="submitEmailBtn" style="width: 100%; height: 48px; border-radius: 24px; border: none; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-size: 16px; font-weight: 500; cursor: pointer;">
+            Salvar E-mail
+        </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -263,5 +345,135 @@ function confirmDeleteAccount() {
 </script>
 <style>
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.domain-btn {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border: none;
+    border-radius: 16px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+
+/* Correção da Label do Modal */
+#newEmailInput:focus + label, 
+#newEmailInput:not(:placeholder-shown) + label,
+#newEmailInput:-webkit-autofill + label {
+    top: 0 !important; 
+    transform: translateY(-50%) scale(0.85) !important; 
+    color: var(--md-sys-color-primary) !important;
+}
 </style>
+<script>
+function openEmailUpdateModal() {
+    document.getElementById('emailUpdateModal').classList.add('active');
+    document.getElementById('emailUpdateModal').setAttribute('aria-hidden', 'false');
+    
+    // Forçar verificação de estado da label ao abrir (caso autofill já esteja preenchido)
+    const input = document.getElementById('newEmailInput');
+    if (input.value) {
+        input.classList.add('has-value');
+    }
+}
+
+let emailSyncInterval = null;
+window.isEmailSyncing = false;
+
+function closeEmailUpdateModal() {
+    if (window.isEmailSyncing) return; // Bloqueia o fechamento se estiver esperando verificação
+    document.getElementById('emailUpdateModal').classList.remove('active');
+    document.getElementById('emailUpdateModal').setAttribute('aria-hidden', 'true');
+}
+
+function appendDomain(domain) {
+    const input = document.getElementById('newEmailInput');
+    let val = input.value;
+    if (val.includes('@')) {
+        val = val.split('@')[0];
+    }
+    input.value = val + domain;
+    input.focus(); 
+}
+
+function submitEmailUpdate() {
+    const email = document.getElementById('newEmailInput').value;
+    if(!email || !email.includes('@')) {
+        alert("Por favor, insira um e-mail válido.");
+        return;
+    }
+    
+    const btn = document.getElementById('submitEmailBtn');
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons-outlined spin">sync</span> Salvando...';
+    
+    fetch('/patient/update_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            // Modifica o modal para exibir mensagem de espera bloqueada
+            window.isEmailSyncing = true;
+            
+            const closeBtn = document.querySelector('#emailUpdateModal .modal-close');
+            if (closeBtn) closeBtn.style.display = 'none';
+            
+            const contentDiv = document.querySelector('#emailUpdateModal .settings-content');
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 16px 8px;">
+                    <span class="material-icons-outlined spin" style="font-size: 48px; color: var(--md-sys-color-primary); margin-bottom: 16px; display: inline-block;">hourglass_empty</span>
+                    <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 500; color: var(--md-sys-color-on-surface);">Confirme seu E-mail</h3>
+                    <p style="margin: 0; font-size: 15px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;">
+                        Enviamos um link de verificação para:<br>
+                        <strong style="color: var(--md-sys-color-primary);">${email}</strong>
+                    </p>
+                    <div style="margin-top: 24px; padding: 12px; background: var(--md-sys-color-surface-variant); border-radius: 8px;">
+                        <p style="margin: 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
+                            Acesse sua caixa de entrada e clique no link.<br>
+                            Esta janela fechará automaticamente.
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            // Inicia o Polling
+            emailSyncInterval = setInterval(() => {
+                fetch('/patient/check_email_sync')
+                .then(r => r.json())
+                .then(syncData => {
+                    if (syncData.synced) {
+                        clearInterval(emailSyncInterval);
+                        window.isEmailSyncing = false;
+                        window.location.reload(); // Recarrega para sumir a barra e atualizar os dados
+                    }
+                })
+                .catch(err => console.log("Erro no polling:", err));
+            }, 3000); // Checa a cada 3 segundos
+            
+        } else {
+            alert("Erro: " + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    })
+    .catch(err => {
+        alert("Erro na conexão.");
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    });
+}
+
+// Bloqueia clique fora do modal se estiver sincronizando
+document.getElementById('emailUpdateModal').addEventListener('click', function(e) {
+    if (window.isEmailSyncing && e.target === this) {
+        e.stopPropagation();
+    }
+});
+</script>
 {% endblock %}
