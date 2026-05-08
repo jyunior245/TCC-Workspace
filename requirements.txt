@@ -27,3 +27,5 @@ Flask-WeasyPrint
 firebase-admin
 authLib
 logger
+zeep
+lxml

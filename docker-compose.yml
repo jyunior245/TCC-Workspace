@@ -17,6 +17,7 @@ services:
       - RUNNING_IN_DOCKER=true
       - OLLAMA_URL=http://ollama:11434/api/generate
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${DATABASE_NAME}
+      - PYTHONUNBUFFERED=1
 
     deploy:
       resources:
