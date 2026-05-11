@@ -7,6 +7,7 @@ from app.routes.index import register_bp
 from app.routes.patient import patient_bp
 from app.routes.agent import agent_bp
 from app.routes.chat import chat_bp
+from app.routes.patient_group_routes import group_bp
 from app.extensions import db
 from app.extensions.google_auth import init_google_auth
 from app.routes.auth_google import auth_google_bp
@@ -50,6 +51,7 @@ def create_app():
     app.register_blueprint(agent_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(auth_google_bp)
+    app.register_blueprint(group_bp)
     
     from app.routes.registration_api import registration_api_bp
     app.register_blueprint(registration_api_bp)

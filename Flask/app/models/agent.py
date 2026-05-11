@@ -15,6 +15,7 @@ class HealthAgent(db.Model):
     simet_codigo_municipio = db.Column(db.String(50), nullable=False)
 
     user = db.relationship('User', backref=db.backref('agent_profile', uselist=False))
+    patient_groups = db.relationship('PatientGroup', backref='agent', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<HealthAgent {self.id}>'

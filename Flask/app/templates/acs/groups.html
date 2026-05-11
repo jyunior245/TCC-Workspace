@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Grupos de Pacientes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}">
+<style>
+    .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .group-card {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .group-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .group-icon {
+        background: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .group-title {
+        font-size: 1.25rem;
+        font-weight: 500;
+        margin: 0;
+        color: var(--md-sys-color-on-surface);
+    }
+    .group-desc {
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.875rem;
+        margin-bottom: 16px;
+        flex-grow: 1;
+    }
+    .group-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--md-sys-color-surface-variant);
+        padding-top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="material-icons-outlined">medical_services</span>
+                <span class="logo-text">ACS Gestão</span>
+            </div>
+        </div>
+
+        <!-- Main Navigation Menu -->
+        <div id="main-sidebar-menu" style="display: flex; flex-direction: column; flex: 1;">
+            <nav class="sidebar-nav">
+                <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}';">
+                    <span class="material-icons-outlined">people</span>
+                    <span>Meus Pacientes</span>
+                </button>
+                <button class="nav-item active" onclick="window.location.href='{{ url_for('groups.list_groups') }}';">
+                    <span class="material-icons-outlined">folder_special</span>
+                    <span>Grupos de Pacientes</span>
+                </button>
+                <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}?section=triage';">
+                    <span class="material-icons-outlined">psychology</span>
+                    <span>Triagem Inteligente</span>
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 4px; padding: 8px 16px;">
+                <button class="nav-item" onclick="toggleSidebarMenu('settings')" style="width: 100%; justify-content: flex-start; background: none; border: none; padding: 8px; cursor: pointer; color: #c4c9c1; display: flex; align-items: center; gap: 16px; font-family: inherit;">
+                    <span class="material-icons-outlined">settings</span>
+                    <span>Configurações</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Menu -->
+        <div id="settings-sidebar-menu" style="display: none; flex-direction: column; flex: 1;">
+            <nav class="sidebar-nav">
+                <button class="nav-item" onclick="toggleSidebarMenu('main')" style="color: var(--md-sys-color-primary-container);">
+                    <span class="material-icons-outlined">arrow_back</span>
+                    <span>Voltar ao Menu</span>
+                </button>
+                <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 16px;"></div>
+                
+                <button class="nav-item" onclick="toggleScreenReader()">
+                    <span class="material-icons-outlined">record_voice_over</span>
+                    <span>Leitura de Tela</span>
+                </button>
+                
+                <button class="nav-item" onclick="window.location.href='/logout';">
+                    <span class="material-icons-outlined">logout</span>
+                    <span>Sair</span>
+                </button>
+                
+                <button class="nav-item delete-account" onclick="confirmDeleteAccount()" style="color: #ff5252;">
+                    <span class="material-icons-outlined">delete_forever</span>
+                    <span>Deletar Conta</span>
+                </button>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="app-bar">
+            <div class="app-bar-title">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <a href="{{ url_for('agent.dashboard') }}" class="md-icon-button" style="color: var(--md-sys-color-on-surface);">
+                        <span class="material-icons-outlined">arrow_back</span>
+                    </a>
+                    <div>
+                        <h1>Grupos de Pacientes</h1>
+                        <p>Organize seus pacientes em grupos de risco ou operacionais</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="sections-container">
+            <section class="section">
+                <div class="md-card elevated" style="max-width: 100%;">
+                    <h2 class="card-title">
+                        <span class="material-icons-outlined">add_circle</span>
+                        Criar Novo Grupo
+                    </h2>
+                    <form action="{{ url_for('groups.create_group') }}" method="POST" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-top: 24px;">
+                        <div class="md-text-field" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <input type="text" name="name" id="name" placeholder=" " required>
+                            <label for="name">Nome do Grupo (ex: Diabéticos)</label>
+                        </div>
+                        <div class="md-text-field" style="flex: 2; min-width: 300px; margin-bottom: 0;">
+                            <input type="text" name="description" id="description" placeholder=" ">
+                            <label for="description">Descrição (Opcional)</label>
+                        </div>
+                        <button type="submit" class="md-button filled" style="height: 56px; padding: 0 32px;">
+                            Criar Grupo
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="title-large" style="margin-bottom: 16px; font-weight: 400;">Seus Grupos ({{ groups|length }})</h2>
+                
+                {% if groups %}
+                <div class="groups-grid">
+                    {% for group in groups %}
+                    <div class="md-card elevated group-card">
+                        <div>
+                            <div class="group-header">
+                                <div class="group-icon">
+                                    <span class="material-icons-outlined">folder</span>
+                                </div>
+                                <h3 class="group-title">{{ group.name }}</h3>
+                            </div>
+                            <p class="group-desc">{{ group.description or "Sem descrição." }}</p>
+                        </div>
+                        
+                        <div class="group-footer">
+                            <div style="display: flex; align-items: center; gap: 8px; color: var(--md-sys-color-primary);">
+                                <span class="material-icons-outlined" style="font-size: 20px;">groups</span>
+                                <span class="label-large">{{ group.patients|length }} Pacientes</span>
+                            </div>
+                            <a href="{{ url_for('groups.group_details', group_id=group.id) }}" class="md-button tonal">
+                                Gerenciar
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="md-card" style="text-align: center; padding: 64px; border-style: dashed;">
+                    <span class="material-icons-outlined" style="font-size: 48px; color: var(--md-sys-color-outline); margin-bottom: 16px;">folder_open</span>
+                    <p class="body-large">Nenhum grupo criado ainda.</p>
+                    <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">Crie seu primeiro grupo acima para começar a organizar seus pacientes.</p>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <nav class="bottom-nav">
+            <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}';">
+                <span class="material-icons-outlined">people</span>
+                <span>Pacientes</span>
+            </button>
+            <button class="nav-item active" onclick="window.location.href='{{ url_for('groups.list_groups') }}';">
+                <span class="material-icons-outlined">folder_special</span>
+                <span>Grupos</span>
+            </button>
+            <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}?section=triage';">
+                <span class="material-icons-outlined">psychology</span>
+                <span>Triagem</span>
+            </button>
+            <button class="nav-item" onclick="window.location.href='/logout';">
+                <span class="material-icons-outlined">logout</span>
+                <span>Sair</span>
+            </button>
+        </nav>
+    </main>
+</div>
+
+<script>
+    function toggleSidebarMenu(menu) {
+        if(menu === 'settings') {
+            document.getElementById('main-sidebar-menu').style.display = 'none';
+            document.getElementById('settings-sidebar-menu').style.display = 'flex';
+        } else {
+            document.getElementById('main-sidebar-menu').style.display = 'flex';
+            document.getElementById('settings-sidebar-menu').style.display = 'none';
+        }
+    }
+
+    function toggleScreenReader() {
+        alert("O recurso de leitura de tela foi ativado.");
+    }
+</script>
+{% endblock %}
