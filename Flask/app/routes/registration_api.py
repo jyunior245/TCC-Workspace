@@ -1,15 +1,13 @@
 import requests
-from flask import Blueprint, request, jsonify, session, url_for
+from flask import Blueprint, request, jsonify, session, url_for, current_app
 from app.services.registration_agent import registration_agent
 from app.repositories.user_repository import UserRepository
-from app.services.voice_service import VoiceService
 from app.services.auth_service import AuthService
 import json
 import sys
 import re
 
 registration_api_bp = Blueprint('registration_api', __name__)
-voice = VoiceService(init_pygame=False)
 
 # ---------------------------------------------------------------------------
 # SOA-CNES SOAP Integration (via Zeep)
@@ -218,7 +216,7 @@ def start_registration():
     }
     
     first_question = registration_agent.get_question_for_step(0)
-    audio_b64 = voice.generate_base64_audio(first_question)
+    audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(first_question)
     
     return jsonify({
         'response': first_question,
@@ -241,7 +239,7 @@ def chat_message():
     if not state:
         return jsonify({'error': 'Conversa não iniciada.'}), 400
         
-    result = registration_agent.handle_chat_interaction(user_message, state, voice)
+    result = registration_agent.handle_chat_interaction(user_message, state, current_app.extensions['services'].voice_service)
     
     if result.get('state_changed'):
         session.modified = True
@@ -262,7 +260,7 @@ def chat_message():
         next_q = registration_agent.get_question_for_step(next_step)
         progress_pct = int((next_step / total_steps) * 100)
         
-        audio_b64 = voice.generate_base64_audio(next_q)
+        audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(next_q)
         return jsonify({
             'response': next_q,
             'audio_b64': audio_b64,
@@ -304,7 +302,7 @@ def chat_message():
             from app.models.user import User
             if User.query.filter_by(email=email).first():
                 msg_erro = "Esse e-mail já consta no nosso banco de dados. Tente fazer login ou use outro e-mail."
-                return jsonify({'response': msg_erro, 'audio_b64': voice.generate_base64_audio(msg_erro), 'status': 'ERROR'})
+                return jsonify({'response': msg_erro, 'audio_b64': current_app.extensions['services'].voice_service.generate_base64_audio(msg_erro), 'status': 'ERROR'})
 
             # 1. Firebase
             try:
@@ -312,7 +310,7 @@ def chat_message():
                 user_id = fb_user['localId']
             except Exception as e:
                 msg_erro = f"Puxa, tivemos um erro ao salvar na nuvem: {str(e)}. Vamos tentar de novo mais tarde?"
-                return jsonify({'response': msg_erro, 'audio_b64': voice.generate_base64_audio(msg_erro), 'status': 'ERROR'})
+                return jsonify({'response': msg_erro, 'audio_b64': current_app.extensions['services'].voice_service.generate_base64_audio(msg_erro), 'status': 'ERROR'})
 
             # 2. Local BD User
             # Evitar conflito de unique_username caso duas pessoas usem prefixos de email iguais
@@ -332,7 +330,7 @@ def chat_message():
             session.pop('reg_state', None)
             
             final_message = "Prontinho! Finalizamos o seu cadastro. Todas as informações foram salvas com sucesso e você está logado. Bem-vindo!"
-            audio_b64 = voice.generate_base64_audio(final_message)
+            audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(final_message)
             
             return jsonify({
                 'response': final_message,

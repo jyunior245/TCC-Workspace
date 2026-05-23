@@ -2,14 +2,15 @@ from flask import Flask
 import os
 from datetime import timedelta
 from app.routes.index import index_bp
-from app.routes.index import login_bp
-from app.routes.index import register_bp
+from app.routes.login import login_bp
+from app.routes.register import register_bp
 from app.routes.patient import patient_bp
 from app.routes.agent import agent_bp
 from app.routes.chat import chat_bp
 from app.routes.patient_group_routes import group_bp
 from app.extensions import db
 from app.extensions.google_auth import init_google_auth
+from app.extensions.services import service_registry
 from app.routes.auth_google import auth_google_bp
 from app.models import init_db
 from dotenv import load_dotenv
@@ -39,6 +40,7 @@ def create_app():
     # Inicializar extensões
     db.init_app(app)
     init_google_auth(app)
+    service_registry.init_app(app)
 
     with app.app_context():
         init_db()

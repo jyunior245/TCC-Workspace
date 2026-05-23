@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from itsdangerous import URLSafeTimedSerializer
 from urllib.parse import quote
 from app.repositories.user_repository import UserRepository
-from app.services.ai_service import HealthAgent
 from app.services.auth_service import AuthService
 import secrets
 from datetime import datetime, timezone, timedelta
@@ -10,7 +9,6 @@ from app.utils.decorators import agent_required
 from app.repositories.daily_report_repository import DailyReportRepository
 
 agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
-ai_svc = HealthAgent()
 
 @agent_bp.route('/dashboard')
 @agent_required
@@ -93,7 +91,7 @@ def generate_report(patient_id):
         return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
 
     # Gera o relatório usando a IA
-    report_content, status_message = ai_svc.generate_daily_report(patient_id)
+    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id)
 
     if report_content:
         return jsonify({"success": True, "message": status_message, "report": report_content})
@@ -108,7 +106,7 @@ def update_report(patient_id):
     if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
         return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
 
-    report_content, status_message = ai_svc.generate_daily_report(patient_id, update_existing=True)
+    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id, update_existing=True)
 
     if report_content:
         return jsonify({"success": True, "message": status_message, "report": report_content})
@@ -141,7 +139,7 @@ def triage():
         history_text = "\n\n".join([f"Data: {r.date}\n{r.content}" for r in reports])
         
         # Analisa a triagem
-        triage_data = ai_svc.analyze_patient_triage(history_text)
+        triage_data = current_app.extensions['services'].health_agent.analyze_patient_triage(history_text)
         nivel = triage_data.get("nivel", "BAIXA")
         
         weight = 1

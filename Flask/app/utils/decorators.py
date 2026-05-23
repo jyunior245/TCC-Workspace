@@ -47,8 +47,8 @@ def login_required(f):
             # Apagado do Firebase, mas vivo no Postgres -> Deleta do Postgres
             try:
                 UserRepository.delete_user_completely(uid)
-            except:
-                pass
+            except Exception as e:
+                print(f"[AUTH][ERROR] Falha ao deletar usuário do Postgres completamente: {e}", flush=True)
             user = None
 
         if not user or not firebase_exists:

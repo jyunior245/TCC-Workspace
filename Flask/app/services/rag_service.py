@@ -108,8 +108,8 @@ class RAGService:
                 query_embedding = self.model.encode(query_text).tolist()
                 results = self.collection.query(query_embeddings=[query_embedding], n_results=n_results)
                 if results['documents']: return " ".join(results['documents'][0])
-            except: pass
-        
+            except Exception as e:
+                print(f"[RAG][ERROR] Falha ao consultar histórico clínico na KB (memória): {e}")
         # Busca simples por texto se o modelo falhar
         return "Consulte o manual do SUS para orientações sobre: " + query_text
 
@@ -135,8 +135,8 @@ class RAGService:
                             if label not in sources:
                                 sources.append(label)
                     return context, sources
-            except:
-                pass
+            except Exception as e:
+                print(f"[RAG][ERROR] Falha ao consultar protocolos com fontes na KB: {e}")
         return "Consulte o manual do SUS para orientações sobre: " + query_text, []
 
 # Instância global
