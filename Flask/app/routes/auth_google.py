@@ -5,6 +5,9 @@ from app.models.user import User
 from app.extensions.sql_alchemy import db
 import threading
 from app.services.ai_service import HealthAgent
+import logging
+
+logger = logging.getLogger(__name__)
 
 agent = HealthAgent()
 
@@ -58,7 +61,7 @@ def callback():
             return redirect(url_for('auth_google.select_type'))
 
     except Exception as e:
-        print(f"Callback error: {e}")
+        logger.error(f"Callback error: {e}", exc_info=True)
         flash("Erro durante a autenticação com o Google.")
         return redirect(url_for('login.login'))
 
@@ -96,6 +99,6 @@ def select_type():
             
         except Exception as e:
             flash("Erro ao criar conta.")
-            print(f"Error creating google user: {e}")
+            logger.error(f"Error creating google user: {e}", exc_info=True)
             
     return render_template('google_select_type.html')

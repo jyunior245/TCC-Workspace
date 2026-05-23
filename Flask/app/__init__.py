@@ -11,6 +11,7 @@ from app.routes.patient_group_routes import group_bp
 from app.extensions import db
 from app.extensions.google_auth import init_google_auth
 from app.extensions.services import service_registry
+from app.extensions.redis_ext import redis_client_ext
 from app.routes.auth_google import auth_google_bp
 from app.models import init_db
 from dotenv import load_dotenv
@@ -46,6 +47,7 @@ def create_app():
     db.init_app(app)
     init_google_auth(app)
     service_registry.init_app(app)
+    redis_client_ext.init_app(app)
 
     with app.app_context():
         init_db()

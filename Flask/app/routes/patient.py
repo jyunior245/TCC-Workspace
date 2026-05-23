@@ -5,6 +5,10 @@ from app.services.auth_service import AuthService
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 
 from app.utils.decorators import patient_required
+from app.extensions.firebase_config import auth_admin
+import logging
+
+logger = logging.getLogger(__name__)
 
 @patient_bp.route('/dashboard')
 @patient_required
@@ -18,7 +22,6 @@ def dashboard():
     
     # --- Sincronização de E-mail (Verificação Pendente) ---
     try:
-        from app.extensions.firebase_config import auth_admin
         if auth_admin:
             firebase_user = auth_admin.get_user(session['user_id'])
             # Se o e-mail no Firebase for diferente do Postgres e estiver verificado
@@ -26,7 +29,7 @@ def dashboard():
                 UserRepository.update_user_email(session['user_id'], firebase_user.email)
                 user.email = firebase_user.email  # Atualiza o objeto em memória para refletir na UI imediatamente
     except Exception as e:
-        print(f"Erro ao checar sincronização de e-mail com Firebase: {e}")
+        logger.error(f"Erro ao checar sincronização de e-mail com Firebase: {e}", exc_info=True)
     # ------------------------------------------------------
     
     patient_code = user.patient_profile.patient_code if user and user.patient_profile else None
@@ -66,7 +69,6 @@ def check_email_sync():
     user = UserRepository.get_user_by_id(user_id)
     
     try:
-        from app.extensions.firebase_config import auth_admin
         if auth_admin:
             firebase_user = auth_admin.get_user(user_id)
             if firebase_user.email != user.email and firebase_user.email_verified:
@@ -74,6 +76,6 @@ def check_email_sync():
                 UserRepository.update_user_email(user_id, firebase_user.email)
                 return jsonify({'synced': True}), 200
     except Exception as e:
-        print(f"Erro no polling de e-mail: {e}")
+        logger.error(f"Erro no polling de e-mail: {e}", exc_info=True)
         
     return jsonify({'synced': False}), 200

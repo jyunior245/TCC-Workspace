@@ -1,28 +1,26 @@
 import logging
 logger = logging.getLogger(__name__)
 import requests
-from flask import Blueprint, request, jsonify, session, url_for, current_app
-from app.services.registration_agent import registration_agent
-from app.repositories.user_repository import UserRepository
-from app.services.auth_service import AuthService
 import json
 import sys
 import re
 import os
-import redis
+import uuid
+import traceback
+from flask import Blueprint, request, jsonify, session, url_for, current_app
+from app.services.registration_agent import registration_agent
+from app.repositories.user_repository import UserRepository
+from app.services.auth_service import AuthService
 from app.services.cnes_service import CNESService
 from app.services.registration_service import RegistrationService
 from app.models.patient import Patient
+from app.models.user import User
+from app.extensions.redis_ext import redis_client_ext
 
 
 registration_api_bp = Blueprint('registration_api', __name__)
 
-redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-redis_client = None
-try:
-    redis_client = redis.from_url(redis_url)
-except Exception as e:
-    logger.error(f"Erro ao conectar ao Redis: {e}", exc_info=True)
+redis_client = redis_client_ext.client
 
 def get_reg_state(session_id):
     if not redis_client or not session_id: return None
@@ -53,7 +51,6 @@ def check_cpf():
 def get_ubs():
     ibge_code = request.args.get('ibge')
     logger.info(f"\n[ROUTE-LOG] Chamada para /api/ubs?ibge={ibge_code}")
-    sys.stdout.flush()
     
     if not ibge_code:
         return jsonify({'error': 'Código IBGE ausente'}), 400
@@ -162,25 +159,6 @@ def get_profissional_info():
     if not cpf:
         return jsonify({'error': 'CPF ausente'}), 400
 
-    # =========================================================================
-    # BLOCO DE TESTES (MOCK) - ATIVO
-    # Descomente o bloco CNES abaixo e comente este bloco MOCK quando for para produção.
-    # =========================================================================
-    '''return jsonify({
-        'cbo': '5151-05',
-        'cbo_descricao': 'Agente comunitário de saúde',
-        'microarea': '', # Inexistente em API pública, requer input manual do ACS
-        'fonte': 'mock_tests'
-    })'''
-
-    # =========================================================================
-    # BLOCO CNES SOAP - INATIVO (Descomente quando o sistema estiver pronto)
-    # =========================================================================
-    
-    # =========================================================================
-    # BLOCO CNES SOAP - INATIVO (Descomente quando o sistema estiver pronto)
-    # =========================================================================
-    
     info = CNESService.get_profissional_info(cpf)
     return jsonify(info)
     

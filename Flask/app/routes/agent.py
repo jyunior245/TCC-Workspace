@@ -7,6 +7,9 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from app.utils.decorators import agent_required
 from app.repositories.daily_report_repository import DailyReportRepository
+import logging
+
+logger = logging.getLogger(__name__)
 
 agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 
@@ -370,9 +373,7 @@ def register_assisted():
             
         except Exception as e:
             flash(f"Erro ao cadastrar paciente: {str(e)}", "error")
-            print(f"Modo Assistência error: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Modo Assistência error: {str(e)}", exc_info=True)
             return redirect(url_for('agent.dashboard'))
 
     return render_template('agent_register_assisted.html')

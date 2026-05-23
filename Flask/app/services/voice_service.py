@@ -5,6 +5,9 @@ import pygame
 import os
 import tempfile
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VoiceService:
     def __init__(self, init_pygame=True):
@@ -18,27 +21,27 @@ class VoiceService:
     def listen(self):
         """Ouve o microfone do usuário e retorna o texto transcrito."""
         with sr.Microphone() as source:
-            print("\n🎤 Ajustando para ruído ambiente... aguarde um segundo.")
+            logger.info("🎤 Ajustando para ruído ambiente... aguarde um segundo.")
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
-            print("🎤 Pode falar...")
+            logger.info("🎤 Pode falar...")
             
             try:
                 # Escuta o usuário (timeout=5s para começar a falar, limitamos a frase a 15s)
                 audio = self.recognizer.listen(source, timeout=10, phrase_time_limit=30)
-                print("🎧 Processando o áudio, aguarde...")
+                logger.info("🎧 Processando o áudio, aguarde...")
                 
                 # Reconhecimento usando Google (gratuito, sem necessidade de chave)
                 text = self.recognizer.recognize_google(audio, language="pt-BR")
                 return text
                 
             except sr.WaitTimeoutError:
-                print("⏳ Tempo esgotado. Nenhuma fala foi detectada.")
+                logger.warning("⏳ Tempo esgotado. Nenhuma fala foi detectada.")
                 return ""
             except sr.UnknownValueError:
-                print("🤷 Não consegui entender o que foi dito.")
+                logger.warning("🤷 Não consegui entender o que foi dito.")
                 return ""
             except sr.RequestError as e:
-                print(f"❌ Erro de conexão com o serviço de reconhecimento de voz: {e}")
+                logger.error(f"❌ Erro de conexão com o serviço de reconhecimento de voz: {e}")
                 return ""
 
     def _sanitize_text(self, text):
@@ -76,7 +79,7 @@ class VoiceService:
                     if data:
                         yield data
         except Exception as e:
-            print(f"[VOICE] Erro ao gerar a stream de áudio contínua: {e}")
+            logger.error(f"[VOICE] Erro ao gerar a stream de áudio contínua: {e}", exc_info=True)
 
     def generate_base64_audio(self, text):
         """Transforma texto em áudio natural e retorna em base64."""
@@ -101,7 +104,7 @@ class VoiceService:
                 audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
             return audio_b64
         except Exception as e:
-            print(f"Erro ao gerar áudio base64: {e}")
+            logger.error(f"Erro ao gerar áudio base64: {e}", exc_info=True)
             return None
         finally:
             if os.path.exists(temp_filename):

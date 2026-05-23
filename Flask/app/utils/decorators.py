@@ -4,6 +4,9 @@ from app.repositories.user_repository import UserRepository
 from app.extensions.firebase_config import auth_admin
 from firebase_admin._auth_utils import UserNotFoundError
 from app.services.auth_service import AuthService
+import logging
+
+logger = logging.getLogger(__name__)
 
 def login_required(f):
     @wraps(f)
@@ -38,9 +41,9 @@ def login_required(f):
             # Apagado do Postgres, mas vivo no Firebase -> Deleta do Firebase
             try:
                 AuthService.delete_user_by_uid(uid)
-                print(f"SYNC BIDIRECIONAL: Usuário {uid} apagado do Firebase com sucesso.", flush=True)
+                logger.info(f"SYNC BIDIRECIONAL: Usuário {uid} apagado do Firebase com sucesso.")
             except Exception as e:
-                print(f"SYNC BIDIRECIONAL ERRO NO FIREBASE: {e}", flush=True)
+                logger.error(f"SYNC BIDIRECIONAL ERRO NO FIREBASE: {e}", exc_info=True)
             firebase_exists = False
             
         elif user and not firebase_exists:
@@ -48,7 +51,7 @@ def login_required(f):
             try:
                 UserRepository.delete_user_completely(uid)
             except Exception as e:
-                print(f"[AUTH][ERROR] Falha ao deletar usuário do Postgres completamente: {e}", flush=True)
+                logger.error(f"[AUTH][ERROR] Falha ao deletar usuário do Postgres completamente: {e}", exc_info=True)
             user = None
 
         if not user or not firebase_exists:

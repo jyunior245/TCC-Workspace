@@ -3,7 +3,11 @@ from app.extensions.sql_alchemy import db as sq_db
 from app.models.user import User
 import json
 import firebase_admin.exceptions
+import logging
+import os
+import requests
 
+logger = logging.getLogger(__name__)
 class AuthService:
     @staticmethod
     def _parse_firebase_error(e):
@@ -14,7 +18,7 @@ class AuthService:
         try:
             # Pyrebase levanta uma exceção requests.exceptions.HTTPError
             error_json = json.loads(e.args[1])
-            print(f"--- DEBUG FIREBASE ERROR: {error_json}")
+            logger.debug(f"--- DEBUG FIREBASE ERROR: {error_json}")
             error_code = error_json['error']['message']
             
             if "WEAK_PASSWORD" in error_code:
@@ -33,8 +37,8 @@ class AuthService:
                 return "Erro de configuração do Firebase (Verifique se Email/Senha está ativado no console)."
             else:
                 return f"Erro do Firebase: {error_code}"
-        except:
-            return f"Erro desconhecido: {str(e)}"
+        except Exception as ex:
+            return f"Erro desconhecido: {str(ex)}"
 
     @staticmethod
     def create_firebase_user(email, password):
@@ -76,15 +80,14 @@ class AuthService:
         """Deletes a user from Firebase Auth using their ID token."""
         try:
             auth.delete_user_account(id_token)
-            print("Rollback: Firebase user deleted successfully.")
+            logger.info("Rollback: Firebase user deleted successfully.")
         except Exception as e:
-            print(f"Failed to rollback Firebase user: {e}")
+            logger.error(f"Failed to rollback Firebase user: {e}", exc_info=True)
 
     @staticmethod
     def admin_update_user_email(uid, new_email):
         """Updates a user's email directly via Admin SDK without requiring old password/re-auth."""
         try:
-            from app.extensions.firebase_config import auth_admin
             if auth_admin:
                 auth_admin.update_user(uid, email=new_email)
                 return True
@@ -98,7 +101,6 @@ class AuthService:
     def admin_update_user_password(uid, new_password):
         """Updates a user's password directly via Admin SDK without requiring old password."""
         try:
-            from app.extensions.firebase_config import auth_admin
             if auth_admin:
                 auth_admin.update_user(uid, password=new_password)
                 return True
@@ -112,10 +114,9 @@ class AuthService:
     def delete_user_by_uid(uid):
         """Deletes a user directly via Admin SDK using UID."""
         try:
-            from app.extensions.firebase_config import auth_admin
             if auth_admin:
                 auth_admin.delete_user(uid)
-                print(f"User {uid} deleted successfully from Firebase via Admin SDK.")
+                logger.info(f"User {uid} deleted successfully from Firebase via Admin SDK.")
             else:
                 raise Exception("Admin SDK not configured for user deletion.")
         except Exception as e:
@@ -130,10 +131,6 @@ class AuthService:
         confirmação ao novo endereço. O e-mail só será alterado quando o usuário
         clicar no link.
         """
-        import os
-        import requests
-        from app.extensions.firebase_config import auth_admin
-        
         try:
             if not auth_admin:
                 raise Exception("Admin SDK not configured.")
@@ -179,10 +176,6 @@ class AuthService:
         """
         Envia o e-mail de verificação inicial para a conta recém-criada (VERIFY_EMAIL).
         """
-        import os
-        import requests
-        from app.extensions.firebase_config import auth_admin
-        
         try:
             if not auth_admin:
                 raise Exception("Admin SDK not configured.")

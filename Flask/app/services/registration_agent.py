@@ -176,7 +176,7 @@ Formato exato esperado:
                   else:
                       try:
                           extracted_val = int(re.sub(r'[^0-9]', '', str(extracted_val)))
-                      except:
+                      except Exception:
                           extracted_val = None
              else: # str
                  extracted_val = str(extracted_val).strip()

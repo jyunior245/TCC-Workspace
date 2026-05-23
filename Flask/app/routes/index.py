@@ -4,6 +4,9 @@ from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
 import threading
 from app.utils.decorators import login_required
+import logging
+
+logger = logging.getLogger(__name__)
 
 index_bp = Blueprint('index', __name__)
 
@@ -87,7 +90,7 @@ def delete_account():
         
         return jsonify({'status': 'success', 'message': 'Conta e dados apagados com sucesso.', 'redirect_url': url_for('login.login')})
     except Exception as e:
-        print(f"Erro ao deletar conta: {e}")
+        logger.error(f"Erro ao deletar conta: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': f'Erro ao deletar conta: {str(e)}'}), 500
 
 @index_bp.route('/')

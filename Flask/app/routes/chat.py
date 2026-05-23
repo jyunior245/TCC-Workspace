@@ -1,5 +1,8 @@
+import logging
 from app.extensions import db
 from flask import Blueprint, request, jsonify, session, render_template, Response, stream_with_context
+
+
 from app.services.ai_service import HealthAgent
 from app.services.voice_service import VoiceService
 import asyncio
@@ -10,6 +13,7 @@ import threading
 from flask import current_app
 
 chat_bp = Blueprint('chat', __name__)
+logger = logging.getLogger(__name__)
 
 # Cache temporário para o áudio (evita passar texto gigante na URL)
 audio_sessions = {}
@@ -46,12 +50,12 @@ def chat():
                 gen = voice.stream_audio_generator(response)
                 async for chunk in gen:
                     if not first_sent:
-                        print(f"[AUDIO][DEBUG] PRE-WARM: Primeiro chunk gerado em {(time.time() - t_start)*1000:.1f}ms.", flush=True)
+                        logger.debug(f"[AUDIO][DEBUG] PRE-WARM: Primeiro chunk gerado em {(time.time() - t_start)*1000:.1f}ms.")
                         first_sent = True
                     audio_q.put(chunk)
             loop.run_until_complete(run_gen())
         except Exception as e:
-            print(f"Erro no pre-warm de áudio: {e}")
+            logger.error(f"Erro no pre-warm de áudio: {e}")
         finally:
             audio_q.put(None)
             loop.close()
@@ -92,12 +96,12 @@ def stream_audio():
     q = audio_data.get('queue')
     t_ready = audio_data.get('created_at', time.time())
     
-    print(f"[AUDIO][DEBUG] Request do browser recebida {(time.time() - t_ready)*1000:.1f}ms após texto pronto.", flush=True)
+    logger.debug(f"[AUDIO][DEBUG] Request do browser recebida {(time.time() - t_ready)*1000:.1f}ms após texto pronto.")
 
     def generate():
         if q:
             # Consome da fila já existente (Pre-warmed)
-            print(f"[AUDIO][DEBUG] Usando stream PRÉ-AQUECIDO para ID {audio_id}.", flush=True)
+            logger.debug(f"[AUDIO][DEBUG] Usando stream PRÉ-AQUECIDO para ID {audio_id}.")
             while True:
                 item = q.get()
                 if item is None:
@@ -105,7 +109,7 @@ def stream_audio():
                 yield item
         else:
             # Fallback (caso o pre-warm falhe ou não tenha sido acionado)
-            print(f"[AUDIO][WARNING] Pre-warm não encontrado para {audio_id}, gerando agora...", flush=True)
+            logger.warning(f"[AUDIO][WARNING] Pre-warm não encontrado para {audio_id}, gerando agora...")
             q_fallback = queue.Queue() # REMOVIDO maxsize para não quebrar WebSocket
             def fallback_producer():
                 loop = asyncio.new_event_loop()
@@ -127,10 +131,7 @@ def stream_audio():
                 yield item
 
     return Response(stream_with_context(generate()), mimetype="audio/mpeg")
-        # OBS: Não deleta o ID imediatamente para permitir múltiplos requests do browser
-
-
-    return Response(stream_with_context(generate()), mimetype="audio/mpeg")
+    # OBS: Não deleta o ID imediatamente para permitir múltiplos requests do browser
 
 @chat_bp.route('/api/audio', methods=['POST'])
 @login_required
@@ -141,7 +142,7 @@ def generate_audio():
     if not text:
         return jsonify({'error': 'Texto ausente'}), 400
 
-    print(f"🔊 Gerando áudio de resposta em background...")
+    logger.info("🔊 Gerando áudio de resposta em background...")
     audio_b64 = voice.generate_base64_audio(text)
     
     return jsonify({
@@ -164,7 +165,7 @@ def end_chat():
     def process_background():
         with app.app_context():
             agent = current_app.extensions['services'].health_agent
-            print(f"[CHAT END] Iniciando atualização de janela de contexto (KB) para user {user_id}", flush=True)
+            logger.info(f"[CHAT END] Iniciando atualização de janela de contexto (KB) para user {user_id}")
             agent.update_patient_context(user_id)
             
     thread = threading.Thread(target=process_background)

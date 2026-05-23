@@ -3,6 +3,9 @@ from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
 from app.services.registration_service import RegistrationService
 from app.utils.decorators import login_required
+import logging
+
+logger = logging.getLogger(__name__)
 
 register_bp = Blueprint('register', __name__)
 
@@ -41,7 +44,7 @@ def register():
 
         except Exception as e:
             flash(f"Puxa, tivemos um problema: {str(e)}", "error")
-            print(f"Registration error: {e}")
+            logger.error(f"Registration error: {e}", exc_info=True)
 
     return render_template('register.html')
 
@@ -76,7 +79,7 @@ def complete_registration():
 
         except Exception as e:
             flash(f"Erro ao salvar dados complementares: {str(e)}", "error")
-            print(f"Completion error: {str(e)}")
+            logger.error(f"Completion error: {str(e)}", exc_info=True)
 
     # Checa se o usuário já preencheu o perfil, mas falta verificar e-mail
     user_id = session.get('user_id')
@@ -129,7 +132,7 @@ def send_registration_verification():
         AuthService.send_initial_verification_email(user_id)
         return jsonify({'status': 'success'})
     except Exception as e:
-        print(f"Erro ao enviar email de verificação: {e}")
+        logger.error(f"Erro ao enviar email de verificação: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @register_bp.route('/check_registration_verification', methods=['GET'])
@@ -143,6 +146,6 @@ def check_registration_verification():
             return jsonify({'verified': True})
             
     except Exception as e:
-        print(f"Erro ao verificar email: {e}")
+        logger.error(f"Erro ao verificar email: {e}", exc_info=True)
         
     return jsonify({'verified': False})

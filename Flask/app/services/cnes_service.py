@@ -10,6 +10,7 @@ import os
 import redis
 import csv
 import json
+from app.extensions.redis_ext import redis_client_ext
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,7 @@ class CNESService:
 
     @staticmethod
     def _get_redis():
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        try:
-            return redis.from_url(redis_url)
-        except Exception as e:
-            logger.error(f"Erro ao conectar ao Redis no CNESService: {e}", exc_info=True)
-            return None
+        return redis_client_ext.client
 
     @staticmethod
     def fetch_ubs(ibge_code: str) -> tuple:

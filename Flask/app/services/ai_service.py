@@ -4,12 +4,15 @@ import os
 import requests
 import json
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from app.services.rag_service import rag_service
 from app.repositories.chat_history_repository import ChatHistoryRepository
 from app.repositories.daily_report_repository import DailyReportRepository
 from app.repositories.patient_context_repository import PatientContextRepository
-from datetime import timedelta
+from app.repositories.user_repository import UserRepository
+import re
+import unicodedata
+import numpy as np
 
 class HealthAgent:
     def __init__(self):
@@ -85,7 +88,6 @@ class HealthAgent:
 
     def generate_daily_report(self, patient_id, target_date=None, update_existing=False):
         """Gera um relatório diário das interações do paciente para o ACS visualizar"""
-        from datetime import timezone, timedelta
         br_tz = timezone(timedelta(hours=-3))
         
         if not target_date:
@@ -244,7 +246,6 @@ Siga EXATAMENTE esta estrutura:
         logger.debug(f"[AI CONTEXT][DEBUG] Resposta JSON bruta do Ollama:\n{response_text}")
         
         try:
-            import re
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 response_text = json_match.group(0)
@@ -252,13 +253,11 @@ Siga EXATAMENTE esta estrutura:
             context_dict = json.loads(response_text)
             
             # Atualiza a data automaticamente via Python para precisão absoluta (UTC-3)
-            from datetime import timezone, timedelta
             br_tz = timezone(timedelta(hours=-3))
             context_dict["data_ultima_conversa"] = datetime.now(br_tz).date().isoformat()
             
             # Preenche o nome verdadeiro do paciente do banco (ignora a tentativa do Llama)
             try:
-                from app.repositories.user_repository import UserRepository
                 user_obj = UserRepository.get_user_by_id(patient_id)
                 if user_obj and user_obj.name:
                     context_dict["nome_do_paciente"] = user_obj.name
@@ -275,16 +274,17 @@ Siga EXATAMENTE esta estrutura:
                 PatientContextRepository.create_context(patient_id, context_dict)
             logger.info(f"[AI CONTEXT] Contexto Atualizado com Sucesso (Incremental) para paciente {patient_id}.")
             return context_dict
-        except Exception as e:
+        except (json.JSONDecodeError, Exception) as e:
             logger.error(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}", exc_info=True)
         return existing_context.context_data if existing_context else None
 
     def _classify_intent(self, message):
         """Classificação de intenção via Similaridade de Embeddings + Fallback Heurístico (Sub-segundo)"""
-        import unicodedata
-        import numpy as np
+        def normalize(s):
+            return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().strip()
         
         msg_lower = message.lower().strip()
+        msg_unaccented = normalize(msg_lower)
         
         # 1. FAST-PATH: Saudações comuns curtas (economia máxima de processamento)
         greetings = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'tudo bom']
@@ -324,6 +324,8 @@ Siga EXATAMENTE esta estrutura:
                     ]
                 }
                 
+                today_date = date.today().strftime('%Y-%m-%d')
+                context_kb = "" 
                 # Gera cache (centróides) apenas na primeira requisição
                 if not hasattr(self, '_intent_embeddings_cache'):
                     self._intent_embeddings_cache = {}
@@ -526,19 +528,6 @@ JSON gerado:
         
         return messages
 
-
-    def _needs_medical_analysis(self, text):
-        # Lógica para decidir se chama o MedGemma (pode ser refinada)
-        keywords = ['dor', 'febre', 'sintoma', 'remédio', 'pressão', 'ferida', 'inflamação']
-        return any(word in text.lower() for word in keywords)
-
-    def _call_medgemma(self, symptoms):
-        try:
-            # Chama o microserviço em FastAPI
-            response = requests.post(self.medgemma_url, json={"symptoms": symptoms}, timeout=10)
-            return response.json().get("analysis", "Erro ao processar análise.")
-        except:
-            return "O serviço de análise médica profunda está offline no momento."
 
     def _call_llama(self, prompt, num_predict=None, temperature=None, json_format=False):
         payload = {
