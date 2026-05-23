@@ -6,6 +6,7 @@ from app.services.voice_service import VoiceService
 from app.services.auth_service import AuthService
 import json
 import sys
+import re
 
 registration_api_bp = Blueprint('registration_api', __name__)
 voice = VoiceService(init_pygame=False)
@@ -29,9 +30,13 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
     Consulta a API SOAP do SOA-CNES usando a biblioteca Zeep.
     Retorna nomes de UBS de um município com LOGS detalhados.
     """
+    # pyrefly: ignore [missing-import]
     from zeep import Client, Settings
+    # pyrefly: ignore [missing-import]
     from zeep.wsse.username import UsernameToken
+    # pyrefly: ignore [missing-import]
     from zeep.plugins import HistoryPlugin
+    # pyrefly: ignore [missing-import]
     from lxml import etree
     
     history = HistoryPlugin()
@@ -40,6 +45,7 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
     sys.stdout.flush()
 
     try:
+        # pyrefly: ignore [missing-import]
         from zeep.transports import Transport
         
         # pyrefly: ignore [unexpected-keyword]
@@ -206,7 +212,9 @@ def start_registration():
     # Inicia a sessão completamente zerada para um novo cadastro
     session['reg_state'] = {
         'current_step': 0,
-        'collected_data': {}
+        'collected_data': {},
+        'sub_state': 'ASKING',
+        'temp_val': None
     }
     
     first_question = registration_agent.get_question_for_step(0)
@@ -233,22 +241,21 @@ def chat_message():
     if not state:
         return jsonify({'error': 'Conversa não iniciada.'}), 400
         
-    current_step = state['current_step']
-    total_steps = len(registration_agent.fields_sequence)
+    result = registration_agent.handle_chat_interaction(user_message, state, voice)
     
-    # Processa via AI
-    extracted_val = registration_agent.process_step(user_message, current_step)
-    
-    field_key = registration_agent.get_field_key_for_step(current_step)
-    
-    # Salva o valor. Note que se a IA falhou em extrair de um input lixo, extraiu None.
-    # Mas como o usuário respondeu algo, nós avançamos para não prendê-lo infinitamente.
-    # (Poderíamos forçar re-perguntar, mas para evitar loop, assumimos o None se inválido)
-    state['collected_data'][field_key] = extracted_val
-    state['current_step'] += 1
-    session.modified = True # Salva o state
+    if result.get('state_changed'):
+        session.modified = True
+        
+    if not result.get('continue'):
+        return jsonify({
+            'response': result.get('response', ''),
+            'audio_b64': result.get('audio_b64', ''),
+            'status': result.get('status', 'IN_PROGRESS'),
+            'progress': result.get('progress', 0)
+        })
     
     next_step = state['current_step']
+    total_steps = len(registration_agent.fields_sequence)
     
     if next_step < total_steps:
         # Fazer próxima pergunta
@@ -368,8 +375,11 @@ def get_profissional_info():
     # =========================================================================
     
     try:
+        # pyrefly: ignore [missing-import]
         from zeep import Client, Settings
+        # pyrefly: ignore [missing-import]
         from zeep.wsse.username import UsernameToken
+        # pyrefly: ignore [missing-import]
         from zeep.transports import Transport
         
         cpf_clean = "".join(filter(str.isdigit, cpf))

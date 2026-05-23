@@ -5,12 +5,12 @@ from app.repositories.user_repository import UserRepository
 from app.services.ai_service import HealthAgent
 from app.services.auth_service import AuthService
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from app.utils.decorators import agent_required
+from app.repositories.daily_report_repository import DailyReportRepository
 
 agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 ai_svc = HealthAgent()
-
-from app.utils.decorators import agent_required
 
 @agent_bp.route('/dashboard')
 @agent_required
@@ -72,15 +72,12 @@ def generate_recovery_link(patient_id):
 @agent_bp.route('/generate_report/<patient_id>', methods=['POST'])
 @agent_required
 def generate_report(patient_id):
-    from datetime import datetime, timezone, timedelta
-    from app.models.daily_report import DailyReport
-    
     # Fuso horário do Brasil para evitar virada prematura do dia no servidor UTC (Docker)
     br_tz = timezone(timedelta(hours=-3))
     today = datetime.now(br_tz).date()
     
     # Check if report already exists for today
-    existing = DailyReport.query.filter_by(patient_id=patient_id, date=today).first()
+    existing = DailyReportRepository.get_by_patient_and_date(patient_id, today)
     if existing:
         return jsonify({
             "success": False, 
@@ -124,13 +121,11 @@ def triage():
     agent_id = session['user_id']
     linked_patients = UserRepository.get_linked_patients(agent_id)
     
-    from app.models.daily_report import DailyReport
-    
     triage_results = []
     
     for patient in linked_patients:
         # Busca os 5 ultimos relatórios
-        reports = DailyReport.query.filter_by(patient_id=patient.id).order_by(DailyReport.date.desc()).limit(5).all()
+        reports = DailyReportRepository.get_recent_reports(patient.id, limit=5)
         
         if not reports:
             triage_results.append({
@@ -170,8 +165,7 @@ def triage():
 @agent_bp.route('/history/<patient_id>', methods=['GET'])
 @agent_required
 def get_history(patient_id):
-    from app.models.daily_report import DailyReport
-    reports = DailyReport.query.filter_by(patient_id=patient_id).order_by(DailyReport.date.desc()).all()
+    reports = DailyReportRepository.get_all_reports(patient_id)
     
     history_data = [
         {
@@ -186,8 +180,7 @@ def get_history(patient_id):
 @agent_bp.route('/download_report/<int:report_id>', methods=['GET'])
 @agent_required
 def download_report(report_id):
-    from app.models.daily_report import DailyReport
-    report = DailyReport.query.get_or_404(report_id)
+    report = DailyReportRepository.get_report_by_id_or_404(report_id)
     
     # Valida se o paciente pertence a este ACS
     agent_id = session['user_id']

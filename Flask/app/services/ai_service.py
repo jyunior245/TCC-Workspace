@@ -4,11 +4,9 @@ import json
 import time
 from datetime import date, datetime
 from app.services.rag_service import rag_service
-from app.models.chat_history import ChatHistory
-from app.models.daily_report import DailyReport
-from app.models.patient import Patient
-from app.models.patient_context import PatientContext
-from app.extensions.sql_alchemy import db
+from app.repositories.chat_history_repository import ChatHistoryRepository
+from app.repositories.daily_report_repository import DailyReportRepository
+from app.repositories.patient_context_repository import PatientContextRepository
 from datetime import timedelta
 
 class HealthAgent:
@@ -38,8 +36,7 @@ class HealthAgent:
         last_chats = []
         if user_id:
             # Reduzimos de 5 para 2 mensagens para economizar tokens e focar na Janela de Contexto (KB)
-            recent_chats = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).limit(2).all()
-            last_chats = list(reversed(recent_chats))
+            last_chats = ChatHistoryRepository.get_recent_chats(user_id, limit=2)
         print(f"[AI][TIME] 2. Busca de Memória (Curto Prazo): {time.time() - start_step:.2f}s", flush=True)
 
         # 3. BUSCA RAG
@@ -76,9 +73,7 @@ class HealthAgent:
         # 6. PERSISTE NO BANCO
         start_step = time.time()
         if user_id:
-            new_chat = ChatHistory(user_id=user_id, message=message, response=response, intent=intent)
-            db.session.add(new_chat)
-            db.session.commit()
+            ChatHistoryRepository.save_chat(user_id, message, response, intent)
         print(f"[AI][TIME] 6. Persistência DB: {time.time() - start_step:.2f}s", flush=True)
         
         print(f"[AI][RESPONSE] {response}", flush=True)
@@ -101,18 +96,13 @@ class HealthAgent:
         start_of_day_utc = start_of_day_local.astimezone(timezone.utc).replace(tzinfo=None)
         end_of_day_utc = end_of_day_local.astimezone(timezone.utc).replace(tzinfo=None)
         
-        query = ChatHistory.query.filter(
-            ChatHistory.user_id == patient_id,
-            ChatHistory.timestamp >= start_of_day_utc,
-            ChatHistory.timestamp <= end_of_day_utc
-        )
-        
-        existing_report = DailyReport.query.filter_by(patient_id=patient_id, date=target_date).first()
+        existing_report = DailyReportRepository.get_by_patient_and_date(patient_id, target_date)
 
         if update_existing and existing_report:
             # Busca apenas mensagens APÓS a última atualização do relatório
-            query = query.filter(ChatHistory.timestamp > existing_report.updated_at)
-            chats_today = query.order_by(ChatHistory.timestamp.asc()).all()
+            chats_today = ChatHistoryRepository.get_chats_for_report(
+                patient_id, start_of_day_utc, end_of_day_utc, existing_report.updated_at
+            )
             
             if not chats_today:
                 return existing_report.content, "Não há novas mensagens para atualizar o relatório hoje."
@@ -143,7 +133,9 @@ Novas Conversas:
 Retorne APENAS o Relatório Diário completo reescrito:
 """
         else:
-            chats_today = query.order_by(ChatHistory.timestamp.asc()).all()
+            chats_today = ChatHistoryRepository.get_chats_for_report(
+                patient_id, start_of_day_utc, end_of_day_utc
+            )
             if not chats_today:
                 return None, "O paciente não teve interações com a IA neste dia."
 
@@ -174,31 +166,24 @@ Gere o Relatório Diário de Saúde agora:
 
         # Salva ou atualiza no banco
         try:
-            existing_report = DailyReport.query.filter_by(patient_id=patient_id, date=target_date).first()
+            existing_report = DailyReportRepository.get_by_patient_and_date(patient_id, target_date)
             if existing_report:
-                existing_report.content = report_content
-                existing_report.updated_at = datetime.utcnow()
+                DailyReportRepository.update_report(existing_report, report_content)
             else:
-                new_report = DailyReport(patient_id=patient_id, date=target_date, content=report_content)
-                db.session.add(new_report)
+                DailyReportRepository.create_report(patient_id, target_date, report_content)
             
-            db.session.commit()
             return report_content, "Relatório gerado com sucesso."
         except Exception as e:
-            db.session.rollback()
             print(f"Erro ao salvar relatório diário: {str(e)}")
             return report_content, f"Relatório gerado, mas erro ao salvar no banco: {str(e)}"
 
     def update_patient_context(self, patient_id):
         """Resume o histórico recente do paciente em um dicionário estruturado e salva no banco de dados (Janela de Contexto)."""
-        existing_context = PatientContext.query.filter_by(patient_id=patient_id).first()
+        existing_context = PatientContextRepository.get_context_by_patient(patient_id)
         
         # Lógica Incremental: Busca apenas mensagens enviadas após a última atualização
-        query = ChatHistory.query.filter_by(user_id=patient_id).order_by(ChatHistory.timestamp.asc())
-        if existing_context and existing_context.updated_at:
-            query = query.filter(ChatHistory.timestamp > existing_context.updated_at)
-            
-        new_chats = query.all()
+        updated_after = existing_context.updated_at if existing_context else None
+        new_chats = ChatHistoryRepository.get_chats_for_context(patient_id, updated_after)
         
         if not new_chats:
             print(f"[AI CONTEXT] Sem novas mensagens para atualizar para o paciente {patient_id}.")
@@ -283,16 +268,12 @@ Siga EXATAMENTE esta estrutura:
             print(f"[AI CONTEXT][DEBUG] JSON final consolidado e persistido no BD:\n{json.dumps(context_dict, ensure_ascii=False, indent=2)}", flush=True)
             
             if existing_context:
-                existing_context.context_data = context_dict
-                existing_context.updated_at = datetime.utcnow()
+                PatientContextRepository.update_context(existing_context, context_dict)
             else:
-                new_context = PatientContext(patient_id=patient_id, context_data=context_dict)
-                db.session.add(new_context)
-            db.session.commit()
+                PatientContextRepository.create_context(patient_id, context_dict)
             print(f"[AI CONTEXT] Contexto Atualizado com Sucesso (Incremental) para paciente {patient_id}.")
             return context_dict
         except Exception as e:
-            db.session.rollback()
             print(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}")
         return existing_context.context_data if existing_context else None
 
@@ -474,7 +455,7 @@ JSON gerado:
         # Injeção de Janela de Contexto (KB) - Memória de Longo Prazo
         if user_id:
             try:
-                user_context = PatientContext.query.filter_by(patient_id=user_id).first()
+                user_context = PatientContextRepository.get_context_by_patient(user_id)
                 if user_context and user_context.context_data:
                     kb_data = user_context.context_data
                     nome = kb_data.get("nome_do_paciente")

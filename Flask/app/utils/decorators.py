@@ -1,6 +1,9 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash, request, jsonify
 from app.repositories.user_repository import UserRepository
+from app.extensions.firebase_config import auth_admin
+from firebase_admin._auth_utils import UserNotFoundError
+from app.services.auth_service import AuthService
 
 def login_required(f):
     @wraps(f)
@@ -14,15 +17,11 @@ def login_required(f):
         uid = session['user_id']
         
         # 1. Validação Server-Side: Busca forçada no Postgres (ignora cache da memória)
-        from app.extensions.sql_alchemy import db
-        from app.models.user import User
-        user = db.session.query(User).populate_existing().filter_by(id=uid).first()
+        user = UserRepository.get_user_by_id_forced(uid)
         
         # 2. Busca no Firebase
         firebase_exists = False
         try:
-            from app.extensions.firebase_config import auth_admin
-            from firebase_admin._auth_utils import UserNotFoundError
             if auth_admin:
                 auth_admin.get_user(uid)
                 firebase_exists = True
@@ -37,7 +36,6 @@ def login_required(f):
         # 3. Sincronização Bidirecional
         if not user and firebase_exists:
             # Apagado do Postgres, mas vivo no Firebase -> Deleta do Firebase
-            from app.services.auth_service import AuthService
             try:
                 AuthService.delete_user_by_uid(uid)
                 print(f"SYNC BIDIRECIONAL: Usuário {uid} apagado do Firebase com sucesso.", flush=True)
@@ -47,7 +45,6 @@ def login_required(f):
             
         elif user and not firebase_exists:
             # Apagado do Firebase, mas vivo no Postgres -> Deleta do Postgres
-            from app.repositories.user_repository import UserRepository
             try:
                 UserRepository.delete_user_completely(uid)
             except:

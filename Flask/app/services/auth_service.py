@@ -119,6 +119,7 @@ class AuthService:
             else:
                 raise Exception("Admin SDK not configured for user deletion.")
         except Exception as e:
+            error_msg = AuthService._parse_firebase_error(e)
             raise Exception(f"Erro ao excluir conta do Firebase: {error_msg}")
 
     @staticmethod

@@ -28,6 +28,18 @@ class UserRepository:
         return User.query.get(user_id)
 
     @staticmethod
+    def get_user_by_id_forced(user_id):
+        return db.session.query(User).populate_existing().filter_by(id=user_id).first()
+
+    @staticmethod
+    def get_user_by_email(email):
+        return User.query.filter_by(email=email).first()
+
+    @staticmethod
+    def get_user_by_username(username):
+        return User.query.filter_by(username=username).first()
+
+    @staticmethod
     def activate_user(user_id):
         user = User.query.get(user_id)
         if user:

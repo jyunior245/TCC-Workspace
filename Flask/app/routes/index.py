@@ -5,6 +5,7 @@ from app.repositories.user_repository import UserRepository
 import threading
 from app.services.ai_service import HealthAgent
 from app.utils.decorators import login_required
+from app.services.registration_service import RegistrationService
 
 agent = HealthAgent()
 
@@ -64,11 +65,10 @@ def register():
 
         try:
             # Verifica localmente se já existe antes de prosseguir
-            from app.models.user import User
-            if User.query.filter_by(email=email).first():
+            if UserRepository.get_user_by_email(email):
                 flash("Este e-mail já está em uso. Faça login ou tente outro.")
                 return render_template('register.html')
-            if User.query.filter_by(username=username).first():
+            if UserRepository.get_user_by_username(username):
                 flash("Nome de usuário indisponível. Escolha outro.")
                 return render_template('register.html')
 
@@ -99,112 +99,24 @@ def complete_registration():
     user_type = session.get('user_type')
 
     if request.method == 'POST':
-        created_fb = False
-        firebase_user = None
         user_id = session.get('user_id')
         
         try:
             if user_type == 'patient':
-                # Função auxiliar para processar listas como strings separadas por vírgula
-                def get_csv_list(field_name):
-                    items = request.form.getlist(field_name)
-                    return ",".join(items) if items else None
-                
-                def get_int(field_name):
-                    val = request.form.get(field_name)
-                    return int(val) if val and val.isdigit() else None
-
-                # Captura campos simples e limpa string vazia para nulo
-                data = {
-                    'date_of_birth': request.form.get('date_of_birth') or None,
-                    'gender': request.form.get('gender') or None,
-                    'cpf': request.form.get('cpf') or None,
-                    'marital_status': request.form.get('marital_status') or None,
-                    'nationality': request.form.get('nationality') or None,
-                    'education_level': request.form.get('education_level') or None,
-                    
-                    'caregiver_name': request.form.get('caregiver_name') or None,
-                    'caregiver_phone': request.form.get('caregiver_phone') or None,
-                    
-                    'cep': request.form.get('cep') or None,
-                    'street': request.form.get('street') or None,
-                    'number': request.form.get('number') or None,
-                    'neighborhood': request.form.get('neighborhood') or None,
-                    'city': request.form.get('city') or None,
-                    'state': request.form.get('state') or None,
-                    'zone': request.form.get('zone') or None,
-                    
-                    'num_residents': get_int('num_residents'),
-                    'has_potable_water': request.form.get('has_potable_water') == 'yes',
-                    'has_sanitation': request.form.get('has_sanitation') == 'yes',
-                    'has_garbage_collection': request.form.get('has_garbage_collection') == 'yes',
-                    'has_electricity': request.form.get('has_electricity') == 'yes',
-                    'has_internet': request.form.get('has_internet') == 'yes',
-                    
-                    'financially_dependent': request.form.get('financially_dependent') == 'yes',
-                    
-                    'chronic_conditions': get_csv_list('chronic_conditions'),
-                    
-                    'mobility_status': request.form.get('mobility_status') or None,
-                    'can_bathe_alone': request.form.get('can_bathe_alone') == 'yes',
-                    'can_dress_alone': request.form.get('can_dress_alone') == 'yes',
-                    'can_eat_alone': request.form.get('can_eat_alone') == 'yes',
-                    
-                    'perceived_memory': request.form.get('perceived_memory') or None,
-                    'mental_diagnoses': get_csv_list('mental_diagnoses'),
-                    
-                    'physical_activity_frequency': request.form.get('physical_activity_frequency') or None,
-                    'sleep_quality': request.form.get('sleep_quality') or None,
-                    'alcohol_consumption': request.form.get('alcohol_consumption') or None,
-                    'smoking': request.form.get('smoking') or None,
-                    
-                    'frequent_visits': request.form.get('frequent_visits') == 'yes',
-                    'community_activities': request.form.get('community_activities') == 'yes',
-                }
-            
-                # Usuário já foi criado no BD local no passo 1.
-                UserRepository.create_patient_profile(user_id, data)
-                
+                RegistrationService.process_patient_completion(user_id, request.form)
             elif user_type == 'health_agent':
-                data = {
-                    'gender': request.form.get('gender'),
-                    'phone_number': request.form.get('phone_number'),
-                    'cep': request.form.get('cep'),
-                    'state': request.form.get('state'),
-                    'municipio': request.form.get('municipio'),
-                    'ubs': request.form.get('ubs'),
-                    'microarea': request.form.get('microarea'),
-                    'cbo': request.form.get('cbo'),
-                    'simet_codigo_municipio': request.form.get('simet_codigo_municipio')
-                }
-                
-                print(f"[DEBUG] Criando perfil de ACS para user_id: {user_id}")
-                UserRepository.create_agent_profile(user_id, data)
+                RegistrationService.process_agent_completion(user_id, request.form)
             
             # Verifica se o e-mail foi confirmado
-            from app.extensions.firebase_config import auth_admin
-            from app.extensions.sql_alchemy import db
-            from app.models.user import User
-            
-            firebase_user = auth_admin.get_user(user_id)
-            is_pseudo_email = firebase_user.email and firebase_user.email.endswith('@tcchealth.com')
-            
-            if not is_pseudo_email and not firebase_user.email_verified:
-                # Reverte a ativação que ocorreu na criação do perfil
-                user = User.query.get(user_id)
-                if user:
-                    user.is_active = False
-                    db.session.commit()
-                
+            success, next_step = RegistrationService.check_and_activate_user(user_id)
+            if not success:
                 session['is_active'] = False
                 flash("Cadastro salvo! Por favor, verifique seu e-mail para continuar.")
-                
                 if user_type in ['patient', 'health_agent']:
                     return redirect(url_for('register.verify_pending'))
             else:
                 session['is_active'] = True
                 flash("Cadastro concluído com sucesso!")
-                
                 if user_type == 'patient':
                     return redirect(url_for('patient.dashboard'))
                 elif user_type == 'health_agent':
@@ -213,34 +125,17 @@ def complete_registration():
         except Exception as e:
             flash(f"Erro ao salvar dados complementares: {str(e)}", "error")
             print(f"Completion error: {str(e)}")
-            import traceback
-            traceback.print_exc()
 
     # Checa se o usuário já preencheu o perfil, mas falta verificar e-mail
     user_id = session.get('user_id')
-    user = None
-    if user_id:
-        from app.models.user import User
-        user = User.query.get(user_id)
-        
-    profile_exists = False
-    if user:
-        if user_type == 'patient' and user.patient_profile:
-            profile_exists = True
-        elif user_type == 'health_agent' and user.agent_profile:
-            profile_exists = True
+    profile_exists, is_active = RegistrationService.has_completed_profile(user_id, user_type)
 
-    if profile_exists and not user.is_active:
-        from app.extensions.firebase_config import auth_admin
-        firebase_user = auth_admin.get_user(user_id)
-        if not firebase_user.email_verified:
+    if profile_exists and not is_active:
+        verified, _ = RegistrationService.verify_pending_status(user_id)
+        if not verified:
             if user_type in ['patient', 'health_agent']:
                 return redirect(url_for('register.verify_pending'))
         else:
-            # Já verificou, ativa e vai pro painel
-            user.is_active = True
-            from app.extensions.sql_alchemy import db
-            db.session.commit()
             session['is_active'] = True
             if user_type == 'patient':
                 return redirect(url_for('patient.dashboard'))
@@ -261,21 +156,10 @@ def verify_pending():
     user_id = session.get('user_id')
     user_type = session.get('user_type')
     
-    from app.extensions.firebase_config import auth_admin
-    from app.models.user import User
+    verified, email_to_verify = RegistrationService.verify_pending_status(user_id)
     
-    firebase_user = auth_admin.get_user(user_id)
-    is_pseudo_email = firebase_user.email and firebase_user.email.endswith('@tcchealth.com')
-    
-    if is_pseudo_email or firebase_user.email_verified:
-        # Se já tiver verificado, joga pro painel
-        user = User.query.get(user_id)
-        if user:
-            user.is_active = True
-            from app.extensions.sql_alchemy import db
-            db.session.commit()
+    if verified:
         session['is_active'] = True
-        
         if user_type == 'patient':
             return redirect(url_for('patient.dashboard'))
         elif user_type == 'health_agent':
@@ -283,7 +167,7 @@ def verify_pending():
         else:
             return redirect(url_for('index.index'))
 
-    return render_template('verify_pending.html', email_to_verify=firebase_user.email)
+    return render_template('verify_pending.html', email_to_verify=email_to_verify)
 
 @register_bp.route('/send_registration_verification', methods=['POST'])
 @login_required
@@ -301,17 +185,8 @@ def send_registration_verification():
 def check_registration_verification():
     user_id = session.get('user_id')
     try:
-        from app.extensions.firebase_config import auth_admin
-        from app.extensions.sql_alchemy import db
-        from app.models.user import User
-        
-        firebase_user = auth_admin.get_user(user_id)
-        if firebase_user.email_verified:
-            # Ativa o usuário
-            user = User.query.get(user_id)
-            if user:
-                user.is_active = True
-                db.session.commit()
+        verified, _ = RegistrationService.verify_pending_status(user_id)
+        if verified:
             session['is_active'] = True
             return jsonify({'verified': True})
             
