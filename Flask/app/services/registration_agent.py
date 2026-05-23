@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 import os
 import json
 import requests
@@ -63,7 +65,7 @@ class RegistrationAgent:
             response = model.generate_content(prompt)
             return response.text
         except Exception as e:
-            print(f"Erro no Gemini: {e}")
+            logger.error(f"Erro no Gemini: {e}", exc_info=True)
             return None
 
     def _call_ollama(self, prompt, is_json=True):
@@ -85,9 +87,9 @@ class RegistrationAgent:
                 data = response.json()
                 return data.get("response", "")
             else:
-                print(f"Erro na resposta do Ollama no onboarding: {response.status_code} - {response.text}")
+                logger.error(f"Erro na resposta do Ollama no onboarding: {response.status_code} - {response.text}", exc_info=True)
         except requests.exceptions.RequestException as e:
-            print(f"Erro no Ollama Onboarding: {e}")
+            logger.error(f"Erro no Ollama Onboarding: {e}", exc_info=True)
         return None
 
     def process_step(self, user_answer, current_step_index):
@@ -130,10 +132,10 @@ Formato exato esperado:
 }}
 """
         if GEMINI_API_KEY:
-            print("[RegistrationAgent] Utilizando GEMINI API para extração.")
+            logger.info("[RegistrationAgent] Utilizando GEMINI API para extração.")
             json_resp = self._call_gemini(system_prompt)
         else:
-            print(f"[RegistrationAgent] Utilizando Ollama local ({MODEL_NAME}) para extração.")
+            logger.info(f"[RegistrationAgent] Utilizando Ollama local ({MODEL_NAME}) para extração.")
             json_resp = self._call_ollama(system_prompt, is_json=True)
             
         extracted_val = None
@@ -151,9 +153,9 @@ Formato exato esperado:
                 
                 parsed = json.loads(clean_json)
                 extracted_val = parsed.get(field_key)
-                print(f"[RegistrationAgent] Extraindo passo {current_step_index} ({field_key}) | Raw: {user_answer} | JSON gerado: {clean_json} | Extraído: {extracted_val}")
+                logger.info(f"[RegistrationAgent] Extraindo passo {current_step_index} ({field_key}) | Raw: {user_answer} | JSON gerado: {clean_json} | Extraído: {extracted_val}")
         except Exception as e:
-            print(f"[RegistrationAgent] JSON falhou: {e} -> Raw response: {json_resp}")
+            logger.info(f"[RegistrationAgent] JSON falhou: {e} -> Raw response: {json_resp}")
             
         # Limpeza / Casting manual
         if extracted_val is not None:

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 import requests
 from flask import Blueprint, request, jsonify, session, url_for, current_app
 from app.services.registration_agent import registration_agent
@@ -6,8 +8,31 @@ from app.services.auth_service import AuthService
 import json
 import sys
 import re
+import os
+import redis
+import uuid
 
 registration_api_bp = Blueprint('registration_api', __name__)
+
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = None
+try:
+    redis_client = redis.from_url(redis_url)
+except Exception as e:
+    logger.error(f"Erro ao conectar ao Redis: {e}", exc_info=True)
+
+def get_reg_state(session_id):
+    if not redis_client or not session_id: return None
+    data = redis_client.get(f"reg_state:{session_id}")
+    return json.loads(data) if data else None
+
+def save_reg_state(session_id, state):
+    if redis_client and session_id:
+        redis_client.setex(f"reg_state:{session_id}", 3600, json.dumps(state))
+
+def clear_reg_state(session_id):
+    if redis_client and session_id:
+        redis_client.delete(f"reg_state:{session_id}")
 
 # ---------------------------------------------------------------------------
 # SOA-CNES SOAP Integration (via Zeep)
@@ -39,7 +64,7 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
     
     history = HistoryPlugin()
     ibge_6 = str(ibge_code)[:6]
-    print(f"\n[SOA-CNES-DEBUG] === INICIANDO CONSULTA IBGE {ibge_6} ===")
+    logger.debug(f"\n[SOA-CNES-DEBUG] === INICIANDO CONSULTA IBGE {ibge_6} ===")
     sys.stdout.flush()
 
     try:
@@ -62,7 +87,7 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
         # Usa CnesServicePort que é SOAP 1.2, conforme esperado pelo SOA-CNES
         service = client.bind('CnesService', 'CnesServicePort')
         
-        print(f"[SOA-CNES-DEBUG] Chamando consultarEstabelecimentoSaudePorMunicipio...")
+        logger.debug(f"[SOA-CNES-DEBUG] Chamando consultarEstabelecimentoSaudePorMunicipio...")
         response = service.consultarEstabelecimentoSaudePorMunicipio(
             Municipio={'codigoMunicipio': ibge_6}
         )
@@ -70,18 +95,18 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
         # Log do XML Enviado
         if history.last_sent:
             xml_sent = etree.tostring(history.last_sent["envelope"], pretty_print=True).decode()
-            print(f"[SOA-CNES-DEBUG] XML ENVIADO:\n{xml_sent}")
+            logger.debug(f"[SOA-CNES-DEBUG] XML ENVIADO:\n{xml_sent}")
 
         # Log do XML Recebido
         if history.last_received:
             xml_received = etree.tostring(history.last_received["envelope"], pretty_print=True).decode()
-            print(f"[SOA-CNES-DEBUG] XML RECEBIDO:\n{xml_received}")
+            logger.debug(f"[SOA-CNES-DEBUG] XML RECEBIDO:\n{xml_received}")
 
         if not response:
-            print(f"[SOA-CNES-DEBUG] API retornou vazio ou None.")
+            logger.debug(f"[SOA-CNES-DEBUG] API retornou vazio ou None.")
             return []
 
-        print(f"[SOA-CNES-DEBUG] Tipo da resposta: {type(response)}")
+        logger.debug(f"[SOA-CNES-DEBUG] Tipo da resposta: {type(response)}")
         
         ubs_names = []
         # A resposta pode vir encapsulada de várias formas no Zeep (lista, dict, objeto)
@@ -120,7 +145,7 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
                     nome = str(nome).strip()
                     # Log opcional dos 3 primeiros nomes
                     if len(ubs_names) < 3:
-                        print(f"[SOA-CNES-DEBUG] Encontrada: {nome} (Tipo: {tipo_codigo})")
+                        logger.debug(f"[SOA-CNES-DEBUG] Encontrada: {nome} (Tipo: {tipo_codigo})")
                     
                     if tipo_codigo in _CNES_UBS_TIPOS:
                         ubs_names.append(nome)
@@ -129,17 +154,17 @@ def fetch_ubs_from_cnes(ibge_code: str) -> list:
                         if any(kw in nome_upper for kw in ['UBS', 'CENTRO DE SAUDE', 'POSTO', 'UNIDADE BASICA', 'USF', 'PSF', 'FARMACIA', 'CLINICA']):
                             ubs_names.append(nome)
 
-        print(f"[SOA-CNES-DEBUG] Total final filtrado: {len(ubs_names)} UBS")
+        logger.debug(f"[SOA-CNES-DEBUG] Total final filtrado: {len(ubs_names)} UBS")
         return ubs_names
 
     except Exception as e:
-        print(f"[SOA-CNES-DEBUG] !!! ERRO NA CHAMADA !!!")
-        print(f"[SOA-CNES-DEBUG] Mensagem: {str(e)}")
+        logger.error(f"[SOA-CNES-DEBUG] !!! ERRO NA CHAMADA !!!", exc_info=True)
+        logger.debug(f"[SOA-CNES-DEBUG] Mensagem: {str(e)}")
         
         if history.last_sent:
-             print(f"[SOA-CNES-DEBUG] XML ENVIADO NO ERRO:\n{etree.tostring(history.last_sent['envelope'], pretty_print=True).decode()}")
+             logger.error(f"[SOA-CNES-DEBUG] XML ENVIADO NO ERRO:\n{etree.tostring(history.last_sent['envelope'], pretty_print=True, exc_info=True).decode()}")
         if history.last_received:
-             print(f"[SOA-CNES-DEBUG] XML RECEBIDO NO ERRO (PODE CONTER O FAULT):\n{etree.tostring(history.last_received['envelope'], pretty_print=True).decode()}")
+             logger.error(f"[SOA-CNES-DEBUG] XML RECEBIDO NO ERRO (PODE CONTER O FAULT, exc_info=True):\n{etree.tostring(history.last_received['envelope'], pretty_print=True).decode()}")
              
         raise e
 
@@ -160,7 +185,7 @@ def get_ubs():
     import os
     import csv
     ibge_code = request.args.get('ibge')
-    print(f"\n[ROUTE-LOG] Chamada para /api/ubs?ibge={ibge_code}")
+    logger.info(f"\n[ROUTE-LOG] Chamada para /api/ubs?ibge={ibge_code}")
     sys.stdout.flush()
     
     if not ibge_code:
@@ -168,7 +193,7 @@ def get_ubs():
 
     # 1. Cache em memória
     if ibge_code in _ubs_cache:
-        print(f"[SOA-CNES] Cache hit para IBGE {ibge_code} ({len(_ubs_cache[ibge_code])} UBS)")
+        logger.info(f"[SOA-CNES] Cache hit para IBGE {ibge_code} ({len(_ubs_cache[ibge_code])} UBS)")
         return jsonify({'ubs': _ubs_cache[ibge_code], 'fonte': 'cache'})
 
     # 2. API SOAP do SOA-CNES
@@ -177,9 +202,9 @@ def get_ubs():
         if ubs_list:
             _ubs_cache[ibge_code] = ubs_list
             return jsonify({'ubs': ubs_list, 'fonte': 'api_cnes'})
-        print(f"[SOA-CNES] API retornou lista vazia para IBGE {ibge_code}, tentando CSV.")
+        logger.info(f"[SOA-CNES] API retornou lista vazia para IBGE {ibge_code}, tentando CSV.")
     except Exception as e:
-        print(f"[SOA-CNES] Falha na chamada SOAP: {e}. Usando fallback CSV.")
+        logger.error(f"[SOA-CNES] Falha na chamada SOAP: {e}. Usando fallback CSV.", exc_info=True)
 
     # 3. Fallback: CSV local
     ubs_list = []
@@ -195,9 +220,9 @@ def get_ubs():
                     if row.get('codigo_ibge') == ibge_code:
                         ubs_list.append(row.get('nome_ubs'))
         else:
-            print(f"[SOA-CNES] CSV não encontrado em {csv_path}")
+            logger.info(f"[SOA-CNES] CSV não encontrado em {csv_path}")
     except Exception as e:
-        print(f"[SOA-CNES] Erro ao ler CSV: {e}")
+        logger.error(f"[SOA-CNES] Erro ao ler CSV: {e}", exc_info=True)
         return jsonify({'error': 'Erro ao consultar base de UBS'}), 500
 
     if ubs_list:
@@ -208,12 +233,16 @@ def get_ubs():
 @registration_api_bp.route('/api/registration_chat/start', methods=['POST'])
 def start_registration():
     # Inicia a sessão completamente zerada para um novo cadastro
-    session['reg_state'] = {
+    state = {
         'current_step': 0,
         'collected_data': {},
         'sub_state': 'ASKING',
         'temp_val': None
     }
+    
+    session_id = uuid.uuid4().hex
+    session['reg_session_id'] = session_id
+    save_reg_state(session_id, state)
     
     first_question = registration_agent.get_question_for_step(0)
     audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(first_question)
@@ -227,7 +256,9 @@ def start_registration():
 
 @registration_api_bp.route('/api/registration_chat/cancel', methods=['POST'])
 def cancel_registration():
-    session.pop('reg_state', None)
+    session_id = session.pop('reg_session_id', None)
+    if session_id:
+        clear_reg_state(session_id)
     return jsonify({'status': 'CANCELLED'})
 
 @registration_api_bp.route('/api/registration_chat/message', methods=['POST'])
@@ -235,13 +266,15 @@ def chat_message():
     data = request.get_json()
     user_message = data.get('message', '')
     
-    state = session.get('reg_state')
+    session_id = session.get('reg_session_id')
+    state = get_reg_state(session_id)
     if not state:
         return jsonify({'error': 'Conversa não iniciada.'}), 400
         
     result = registration_agent.handle_chat_interaction(user_message, state, current_app.extensions['services'].voice_service)
     
     if result.get('state_changed'):
+        save_reg_state(session_id, state)
         session.modified = True
         
     if not result.get('continue'):
@@ -285,7 +318,7 @@ def chat_message():
                         if data and isinstance(data, list) and len(data) > 0:
                             collected['cep'] = data[0].get('cep', '').replace('-', '')
                 except Exception as e:
-                    print(f"Erro ao buscar CEP autônomo: {e}")
+                    logger.error(f"Erro ao buscar CEP autônomo: {e}", exc_info=True)
         # ----------------------
         
         import uuid
@@ -327,7 +360,10 @@ def chat_message():
             session['user_type'] = 'patient'
             session['user_name'] = name
             session['is_active'] = True
-            session.pop('reg_state', None)
+            
+            # Limpa o state
+            session.pop('reg_session_id', None)
+            clear_reg_state(session_id)
             
             final_message = "Prontinho! Finalizamos o seu cadastro. Todas as informações foram salvas com sucesso e você está logado. Bem-vindo!"
             audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(final_message)
@@ -341,7 +377,7 @@ def chat_message():
             })
             
         except Exception as db_err:
-             print(f"Erro BD final: {db_err}")
+             logger.error(f"Erro BD final: {db_err}", exc_info=True)
              import traceback
              with open("reg_error_trace.txt", "w") as f:
                  f.write(traceback.format_exc())
@@ -420,7 +456,7 @@ def get_profissional_info():
         })
         
     except Exception as e:
-        print(f"[SOA-CNES] Erro ao buscar CBO para CPF {cpf}: {str(e)}")
+        logger.error(f"[SOA-CNES] Erro ao buscar CBO para CPF {cpf}: {str(e, exc_info=True)}")
         return jsonify({
             'cbo': '5151-05',
             'cbo_descricao': 'Agente comunitário de saúde',

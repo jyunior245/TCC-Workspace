@@ -30,3 +30,4 @@ logger
 zeep
 lxml
 flask-cors
+redis>=5.0.0

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 import os
 import requests
 import json
@@ -22,14 +24,14 @@ class HealthAgent:
 
     def get_response(self, message, user_id=None):
         start_total = time.time()
-        print(f"\n[AI][DEBUG] === INÍCIO DO PROCESSAMENTO ===", flush=True)
-        print(f"[AI][USER] Mensagem: '{message}'", flush=True)
+        logger.debug(f"\n[AI][DEBUG] === INÍCIO DO PROCESSAMENTO ===")
+        logger.info(f"[AI][USER] Mensagem: '{message}'")
 
         # 1. CLASSIFICAÇÃO DE INTENÇÃO
         start_step = time.time()
         intent = self._classify_intent(message)
             
-        print(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})", flush=True)
+        logger.info(f"[AI][TIME] 1. Classificação de Intenção: {time.time() - start_step:.2f}s (Intent: {intent})")
         
         # 2. MEMÓRIA DE CURTO PRAZO (Reduzida para evitar redundância com a KB)
         start_step = time.time()
@@ -37,7 +39,7 @@ class HealthAgent:
         if user_id:
             # Reduzimos de 5 para 2 mensagens para economizar tokens e focar na Janela de Contexto (KB)
             last_chats = ChatHistoryRepository.get_recent_chats(user_id, limit=2)
-        print(f"[AI][TIME] 2. Busca de Memória (Curto Prazo): {time.time() - start_step:.2f}s", flush=True)
+        logger.info(f"[AI][TIME] 2. Busca de Memória (Curto Prazo): {time.time() - start_step:.2f}s")
 
         # 3. BUSCA RAG
         start_step = time.time()
@@ -54,31 +56,31 @@ class HealthAgent:
             try:
                 context_sus, sources = rag_service.query_protocols_with_sources(message, n_results=1)
             except Exception as e:
-                print(f"[AI][ERROR] Falha no RAG: {e}")
+                logger.error(f"[AI][ERROR] Falha no RAG: {e}", exc_info=True)
         
         rag_hit = bool(context_sus) and not context_sus.startswith("Consulte o manual do SUS")
-        print(f"[AI][TIME] 3. Busca RAG (Embeddings): {time.time() - start_step:.2f}s", flush=True)
+        logger.info(f"[AI][TIME] 3. Busca RAG (Embeddings): {time.time() - start_step:.2f}s")
         
         # 4. CONSTRUÇÃO DO PROMPT
         start_step = time.time()
         messages = self._build_chat_messages(message, intent, context_sus, last_chats, sources, user_id)
-        print(f"[AI][TIME] 4. Montagem do Template: {time.time() - start_step:.2f}s", flush=True)
+        logger.info(f"[AI][TIME] 4. Montagem do Template: {time.time() - start_step:.2f}s")
         
         # 5. GERA RESPOSTA
         start_step = time.time()
-        print(f"[AI][PROCESSANDO] Gerando resposta no LLM...", flush=True)
+        logger.info(f"[AI][PROCESSANDO] Gerando resposta no LLM...")
         response = self._call_llama_chat(messages)
-        print(f"[AI][TIME] 5. Geração Llama Chat: {time.time() - start_step:.2f}s", flush=True)
+        logger.info(f"[AI][TIME] 5. Geração Llama Chat: {time.time() - start_step:.2f}s")
 
         # 6. PERSISTE NO BANCO
         start_step = time.time()
         if user_id:
             ChatHistoryRepository.save_chat(user_id, message, response, intent)
-        print(f"[AI][TIME] 6. Persistência DB: {time.time() - start_step:.2f}s", flush=True)
+        logger.info(f"[AI][TIME] 6. Persistência DB: {time.time() - start_step:.2f}s")
         
-        print(f"[AI][RESPONSE] {response}", flush=True)
+        logger.info(f"[AI][RESPONSE] {response}")
         
-        print(f"[AI][DEBUG] === FIM DO PROCESSAMENTO ({time.time() - start_total:.2f}s total) ===\n", flush=True)
+        logger.debug(f"[AI][DEBUG] === FIM DO PROCESSAMENTO ({time.time() - start_total:.2f}s total) ===\n")
         return response
 
     def generate_daily_report(self, patient_id, target_date=None, update_existing=False):
@@ -174,7 +176,7 @@ Gere o Relatório Diário de Saúde agora:
             
             return report_content, "Relatório gerado com sucesso."
         except Exception as e:
-            print(f"Erro ao salvar relatório diário: {str(e)}")
+            logger.error(f"Erro ao salvar relatório diário: {str(e, exc_info=True)}")
             return report_content, f"Relatório gerado, mas erro ao salvar no banco: {str(e)}"
 
     def update_patient_context(self, patient_id):
@@ -186,14 +188,14 @@ Gere o Relatório Diário de Saúde agora:
         new_chats = ChatHistoryRepository.get_chats_for_context(patient_id, updated_after)
         
         if not new_chats:
-            print(f"[AI CONTEXT] Sem novas mensagens para atualizar para o paciente {patient_id}.")
+            logger.info(f"[AI CONTEXT] Sem novas mensagens para atualizar para o paciente {patient_id}.")
             return existing_context.context_data if existing_context else None
             
         # Limita a 15 interações mais recentes para evitar estouro do prompt
         if len(new_chats) > 15:
             new_chats = new_chats[-15:]
             
-        print(f"[AI CONTEXT][DEBUG] Processando {len(new_chats)} novas mensagens para o paciente {patient_id}.", flush=True)
+        logger.debug(f"[AI CONTEXT][DEBUG] Processando {len(new_chats)} novas mensagens para o paciente {patient_id}.")
         
         conversation_transcript = "\n".join([
             f"Paciente: {c.message}\nIA: {c.response}\n" 
@@ -239,7 +241,7 @@ Siga EXATAMENTE esta estrutura:
 }}
 """
         response_text = self._call_llama(summary_prompt, num_predict=500, temperature=0.1, json_format=True).strip()
-        print(f"[AI CONTEXT][DEBUG] Resposta JSON bruta do Ollama:\n{response_text}", flush=True)
+        logger.debug(f"[AI CONTEXT][DEBUG] Resposta JSON bruta do Ollama:\n{response_text}")
         
         try:
             import re
@@ -263,18 +265,18 @@ Siga EXATAMENTE esta estrutura:
                 else:
                     context_dict["nome_do_paciente"] = "Paciente"
             except Exception as e:
-                print(f"[AI CONTEXT] Aviso: falha ao buscar nome real do bd: {e}")
+                logger.info(f"[AI CONTEXT] Aviso: falha ao buscar nome real do bd: {e}")
             
-            print(f"[AI CONTEXT][DEBUG] JSON final consolidado e persistido no BD:\n{json.dumps(context_dict, ensure_ascii=False, indent=2)}", flush=True)
+            logger.debug(f"[AI CONTEXT][DEBUG] JSON final consolidado e persistido no BD:\n{json.dumps(context_dict, ensure_ascii=False, indent=2)}")
             
             if existing_context:
                 PatientContextRepository.update_context(existing_context, context_dict)
             else:
                 PatientContextRepository.create_context(patient_id, context_dict)
-            print(f"[AI CONTEXT] Contexto Atualizado com Sucesso (Incremental) para paciente {patient_id}.")
+            logger.info(f"[AI CONTEXT] Contexto Atualizado com Sucesso (Incremental) para paciente {patient_id}.")
             return context_dict
         except Exception as e:
-            print(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}")
+            logger.error(f"[AI CONTEXT ERROR] Falha ao extrair ou salvar contexto: {e}\nResposta Bruta: {response_text}", exc_info=True)
         return existing_context.context_data if existing_context else None
 
     def _classify_intent(self, message):
@@ -287,7 +289,7 @@ Siga EXATAMENTE esta estrutura:
         # 1. FAST-PATH: Saudações comuns curtas (economia máxima de processamento)
         greetings = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'tudo bom']
         if any(g in msg_lower for g in greetings) and len(msg_lower) < 25:
-            print(f"[AI][DEBUG] Intent classificada via FAST-PATH: GREETING", flush=True)
+            logger.debug(f"[AI][DEBUG] Intent classificada via FAST-PATH: GREETING")
             return "GREETING"
 
         # 2. CLASSIFICAÇÃO VIA EMBEDDINGS (Muito Rápida, baseada em vetores pré-calculados)
@@ -348,14 +350,14 @@ Siga EXATAMENTE esta estrutura:
                         best_score = score
                         best_intent = intent_cat
                         
-                print(f"[AI][DEBUG] Intent classificada via EMBEDDINGS (Score: {best_score:.3f}): {best_intent}", flush=True)
+                logger.debug(f"[AI][DEBUG] Intent classificada via EMBEDDINGS (Score: {best_score:.3f}): {best_intent}")
                 
                 # Aplica um limiar de confiança (se não bater com nada fortemente, cai no OTHER ou Fallback)
                 if best_score > 0.35: 
                     return best_intent
                     
             except Exception as e:
-                print(f"[AI][ERROR] Falha na classificação por Embeddings: {e}. Usando Fallback.", flush=True)
+                logger.error(f"[AI][ERROR] Falha na classificação por Embeddings: {e}. Usando Fallback.", exc_info=True)
 
         # 3. FALLBACK: HEURÍSTICA DE REGEX/STEMS (Caso o modelo RAG não esteja na memória)
         msg_unaccented = unicodedata.normalize('NFKD', msg_lower).encode('ascii', 'ignore').decode('utf-8')
@@ -363,7 +365,7 @@ Siga EXATAMENTE esta estrutura:
         # Emergências
         emergencies = ['dor forte', 'dor aguda', 'falta de ar', 'infarto', 'socorro', 'urgente', 'morrendo', 'samu', 'ambulancia']
         if any(e in msg_unaccented for e in emergencies):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: EMERGENCY", flush=True)
+            logger.debug(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: EMERGENCY")
             return "EMERGENCY"
 
         # Consultas de Saúde (Stems)
@@ -390,15 +392,15 @@ Siga EXATAMENTE esta estrutura:
         
         exact_words = ["mal", "sus"]
         if any(stem in msg_unaccented for stem in health_stems):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY", flush=True)
+            logger.debug(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY")
             return "HEALTH_QUERY"
             
         words = msg_unaccented.split()
         if any(w in words for w in exact_words):
-            print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY", flush=True)
+            logger.debug(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: HEALTH_QUERY")
             return "HEALTH_QUERY"
             
-        print(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: OTHER", flush=True)
+        logger.debug(f"[AI][DEBUG] Intent classificada via HEURÍSTICA FALLBACK: OTHER")
         return "OTHER"
 
     def analyze_patient_triage(self, patient_history_text):
@@ -442,10 +444,10 @@ JSON gerado:
             triage_data["nivel"] = nivel
             return triage_data
         except json.JSONDecodeError as e:
-            print(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text}")
+            logger.error(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text}", exc_info=True)
             return {"nivel": "BAIXA", "justificativa": "Erro ao tentar ler o formato devolvido pela Inteligência Artificial. Recomendável ver os relatórios manualmente."}
         except Exception as e:
-            print(f"[AI TRIAGE ERROR] Erro inesperado: {e}")
+            logger.error(f"[AI TRIAGE ERROR] Erro inesperado: {e}", exc_info=True)
             return {"nivel": "BAIXA", "justificativa": "Erro interno no processamento com a Inteligência Artificial."}
 
     
@@ -483,7 +485,7 @@ JSON gerado:
                     if bg_info:
                         system_rules += f" [{bg_info.strip()}]"
             except Exception as e:
-                print(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}")
+                logger.error(f"[AI CONTEXT ERROR] Erro ao carregar PatientContext: {e}", exc_info=True)
 
         if intent == "EMERGENCY":
             system_rules += " ATENÇÃO: Possível emergência. Oriente o paciente a buscar ajuda imediata (SAMU/UBS) e avalie sinais de risco."
@@ -558,10 +560,10 @@ JSON gerado:
         try:
             res = requests.post(self.ollama_url, json=payload, timeout=90)
             if res.status_code != 200:
-                print(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}")
+                logger.error(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}", exc_info=True)
             return res.json().get("response", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
-            print(f"Erro no Llama: {e}")
+            logger.error(f"Erro no Llama: {e}", exc_info=True)
             return "Erro de conexão com o Llama 3.2:3b (Ollama). Verifique se ele está rodando."
 
     def _call_llama_chat(self, messages):
@@ -579,10 +581,10 @@ JSON gerado:
         try:
             res = requests.post(chat_url, json=payload, timeout=90)
             if res.status_code != 200:
-                print(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}")
+                logger.error(f"[AI][ERROR] Ollama respondeu HTTP {res.status_code}: {res.text}", exc_info=True)
             return res.json().get("message", {}).get("content", "Desculpe, não consegui gerar uma resposta.")
         except Exception as e:
-            print(f"Erro no Llama Chat: {e}")
+            logger.error(f"Erro no Llama Chat: {e}", exc_info=True)
             return "Erro de conexão com o Llama 3.2 (Ollama). Verifique se ele está rodando."
 
 

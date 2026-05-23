@@ -1,7 +1,10 @@
 import os
+import logging
 from chromadb import PersistentClient, Settings
 from sentence_transformers import SentenceTransformer
 from pypdf import PdfReader
+
+logger = logging.getLogger(__name__)
 
 class RAGService:
     def __init__(self):
@@ -22,24 +25,24 @@ class RAGService:
         self.offline_mode = False
         
         try:
-            print("⌛ Inicializando modelo de embeddings no startup do servidor...", flush=True)
+            logger.info("⌛ Inicializando modelo de embeddings no startup do servidor...")
             import torch
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            print(f"⚙️ Dispositivo selecionado para embeddings: {device.upper()}", flush=True)
+            logger.info(f"⚙️ Dispositivo selecionado para embeddings: {device.upper()}")
             
             model_name = 'sentence-transformers/all-MiniLM-L6-v2'
-            print(f"📥 Carregando modelo '{model_name}' (do cache ou baixando)...", flush=True)
+            logger.info(f"📥 Carregando modelo '{model_name}' (do cache ou baixando)...")
             self.model = SentenceTransformer(model_name, device=device)
-            print("✅ Modelo carregado na memória.", flush=True)
+            logger.info("✅ Modelo carregado na memória.")
             
-            print("🔥 Executando warmup do modelo na GPU para compilação (aguarde)...", flush=True)
+            logger.info("🔥 Executando warmup do modelo na GPU para compilação (aguarde)...")
             self.model.encode("Warmup dummy text para inicializar o contexto CUDA.")
-            print("✅ Modelo de embeddings aquecido com sucesso!", flush=True)
+            logger.info("✅ Modelo de embeddings aquecido com sucesso!")
             
             # Carrega os protocolos se o banco estiver vazio
             self.load_pdf_protocols()
         except Exception as e:
-            print(f"⚠️ Erro crítico ao carregar modelo de embeddings: {e}", flush=True)
+            logger.error(f"⚠️ Erro crítico ao carregar modelo de embeddings: {e}", exc_info=True)
             self.offline_mode = True
             self.model = None
 
@@ -49,13 +52,13 @@ class RAGService:
         
         # Verifica se o banco já tem dados para não reprocessar tudo
         if self.collection.count() > 0:
-            print("✅ Banco vetorial já contém dados. Pulando carregamento inicial.")
+            logger.info("✅ Banco vetorial já contém dados. Pulando carregamento inicial.")
             return
 
         for filename in os.listdir(self.protocols_dir):
             if filename.endswith(".pdf"):
                 path = os.path.join(self.protocols_dir, filename)
-                print(f"📄 Processando PDF: {filename}...")
+                logger.info(f"📄 Processando PDF: {filename}...")
                 reader = PdfReader(path)
                 
                 # Extrai texto por página e adiciona ao banco
@@ -109,7 +112,7 @@ class RAGService:
                 results = self.collection.query(query_embeddings=[query_embedding], n_results=n_results)
                 if results['documents']: return " ".join(results['documents'][0])
             except Exception as e:
-                print(f"[RAG][ERROR] Falha ao consultar histórico clínico na KB (memória): {e}")
+                logger.error(f"[RAG][ERROR] Falha ao consultar histórico clínico na KB (memória): {e}", exc_info=True)
         # Busca simples por texto se o modelo falhar
         return "Consulte o manual do SUS para orientações sobre: " + query_text
 
@@ -136,7 +139,7 @@ class RAGService:
                                 sources.append(label)
                     return context, sources
             except Exception as e:
-                print(f"[RAG][ERROR] Falha ao consultar protocolos com fontes na KB: {e}")
+                logger.error(f"[RAG][ERROR] Falha ao consultar protocolos com fontes na KB: {e}", exc_info=True)
         return "Consulte o manual do SUS para orientações sobre: " + query_text, []
 
 # Instância global

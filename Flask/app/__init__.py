@@ -14,15 +14,20 @@ from app.extensions.services import service_registry
 from app.routes.auth_google import auth_google_bp
 from app.models import init_db
 from dotenv import load_dotenv
+from app.extensions.logger import init_logger
+from app.routes.registration_api import registration_api_bp
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
-    app.secret_key="supersecretkey"
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-
+    
+    # Inicializa o logger profissional da aplicação
+    init_logger(app)
     # Load .env from parent directory
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     load_dotenv(os.path.join(base_dir, '.env'))
+    
+    app.secret_key = os.getenv("SECRET_KEY")
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
     
     # Configurações do banco de dados
     user = os.getenv("POSTGRES_USER", "postgres")
@@ -54,8 +59,6 @@ def create_app():
     app.register_blueprint(chat_bp)
     app.register_blueprint(auth_google_bp)
     app.register_blueprint(group_bp)
-    
-    from app.routes.registration_api import registration_api_bp
     app.register_blueprint(registration_api_bp)
 
     return app
