@@ -2,6 +2,10 @@ from app.repositories.user_repository import UserRepository
 from app.extensions.firebase_config import auth_admin
 from app.extensions.sql_alchemy import db
 from app.models.user import User
+import logging
+import uuid
+import requests
+from flask import jsonify, url_for, current_app
 
 class RegistrationService:
     @staticmethod
@@ -124,3 +128,74 @@ class RegistrationService:
             profile_exists = True
             
         return profile_exists, user.is_active
+
+    @staticmethod
+    def finalize_voice_registration(collected_data, session, session_id, voice_service):
+
+        logger = logging.getLogger(__name__)
+
+        # --- AUTO CEP FETCH ---
+        if 'cep' not in collected_data and 'state' in collected_data and 'city' in collected_data:
+            state_uf = str(collected_data['state']).strip()
+            city_name = str(collected_data['city']).strip()
+            if state_uf and city_name:
+                try:
+                    resp = requests.get(f"https://viacep.com.br/ws/{state_uf}/{city_name}/Centro/json/", timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data and isinstance(data, list) and len(data) > 0:
+                            collected_data['cep'] = data[0].get('cep', '').replace('-', '')
+                except Exception as e:
+                    logger.error(f"Erro ao buscar CEP autônomo: {e}", exc_info=True)
+        # ----------------------
+        
+        unique_suffix = uuid.uuid4().hex[:8]
+        
+        email = collected_data.get('email') or f"voz_{unique_suffix}@example.com"
+        password = collected_data.get('password') or "123Mudar!@" 
+        name = collected_data.get('name') or 'Usuário Voz'
+        
+        try:
+            # Verifica se e-mail já existe no banco local antes de ir pro Firebase
+            if User.query.filter_by(email=email).first():
+                msg_erro = "Esse e-mail já consta no nosso banco de dados. Tente fazer login ou use outro e-mail."
+                return jsonify({'response': msg_erro, 'audio_b64': voice_service.generate_base64_audio(msg_erro), 'status': 'ERROR'})
+
+            # 1. Firebase
+            try:
+                from app.services.auth_service import AuthService
+                fb_user = AuthService.create_firebase_user(email, password)
+                user_id = fb_user['localId']
+            except Exception as e:
+                msg_erro = f"Puxa, tivemos um erro ao salvar na nuvem: {str(e)}. Vamos tentar de novo mais tarde?"
+                return jsonify({'response': msg_erro, 'audio_b64': voice_service.generate_base64_audio(msg_erro), 'status': 'ERROR'})
+
+            # 2. Local BD User
+            base_username = email.split('@')[0][:40]
+            username = f"{base_username}_{unique_suffix}"
+            UserRepository.create_user(user_id, name, username, email, 'patient')
+            
+            # 3. Local BD Profile
+            patient_data = {k: v for k, v in collected_data.items() if k not in ['name', 'email', 'password'] and v is not None}
+            UserRepository.create_patient_profile(user_id, patient_data)
+            
+            # 4. Login Session
+            session['user_id'] = user_id
+            session['user_type'] = 'patient'
+            session['user_name'] = name
+            session['is_active'] = True
+            
+            final_message = "Prontinho! Finalizamos o seu cadastro. Todas as informações foram salvas com sucesso e você está logado. Bem-vindo!"
+            audio_b64 = voice_service.generate_base64_audio(final_message)
+            
+            return jsonify({
+                'response': final_message,
+                'audio_b64': audio_b64,
+                'status': 'FINISHED',
+                'progress': 100,
+                'redirect_url': url_for('patient.dashboard')
+            })
+            
+        except Exception as db_err:
+             logger.error(f"Erro BD final: {db_err}", exc_info=True)
+             return jsonify({'response': "Ocorreu um erro interno no banco de dados ao salvar seu cadastro final. Nossa equipe foi notificada.", 'status': 'ERROR'})

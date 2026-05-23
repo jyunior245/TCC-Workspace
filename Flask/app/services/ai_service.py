@@ -176,7 +176,7 @@ Gere o Relatório Diário de Saúde agora:
             
             return report_content, "Relatório gerado com sucesso."
         except Exception as e:
-            logger.error(f"Erro ao salvar relatório diário: {str(e, exc_info=True)}")
+            logger.error(f"Erro ao salvar relatório diário: {e}", exc_info=True)
             return report_content, f"Relatório gerado, mas erro ao salvar no banco: {str(e)}"
 
     def update_patient_context(self, patient_id):

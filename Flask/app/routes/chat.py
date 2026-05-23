@@ -7,10 +7,9 @@ import uuid
 import time
 import queue
 import threading
+from flask import current_app
 
 chat_bp = Blueprint('chat', __name__)
-agent = HealthAgent()
-voice = VoiceService(init_pygame=False)
 
 # Cache temporário para o áudio (evita passar texto gigante na URL)
 audio_sessions = {}
@@ -20,6 +19,8 @@ from app.utils.decorators import login_required
 @chat_bp.route('/api/chat', methods=['POST'])
 @login_required
 def chat():
+    agent = current_app.extensions['services'].health_agent
+    voice = current_app.extensions['services'].voice_service
     user_id = session.get('user_id')
     data = request.get_json()
     user_message = data.get('message')
@@ -79,6 +80,7 @@ def chat():
 @chat_bp.route('/api/audio/stream', methods=['GET'])
 def stream_audio():
     """Endpoint que transmite o áudio pré-aquecido ou gera se necessário."""
+    voice = current_app.extensions['services'].voice_service
     t_req = time.time()
     audio_id = request.args.get('id')
     audio_data = audio_sessions.get(audio_id)
@@ -133,6 +135,7 @@ def stream_audio():
 @chat_bp.route('/api/audio', methods=['POST'])
 @login_required
 def generate_audio():
+    voice = current_app.extensions['services'].voice_service
     data = request.get_json()
     text = data.get('text')
     if not text:
@@ -156,11 +159,11 @@ def end_chat():
     user_id = session.get('user_id')
     
     # Recupenrando o app para ser invocado na thread
-    from flask import current_app
     app = current_app._get_current_object()
     
     def process_background():
         with app.app_context():
+            agent = current_app.extensions['services'].health_agent
             print(f"[CHAT END] Iniciando atualização de janela de contexto (KB) para user {user_id}", flush=True)
             agent.update_patient_context(user_id)
             
