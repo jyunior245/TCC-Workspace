@@ -3,13 +3,9 @@ from app.extensions.google_auth import oauth
 from app.repositories.user_repository import UserRepository
 from app.models.user import User
 from app.extensions.sql_alchemy import db
-import threading
-from app.services.ai_service import HealthAgent
 import logging
 
 logger = logging.getLogger(__name__)
-
-agent = HealthAgent()
 
 auth_google_bp = Blueprint('auth_google', __name__)
 

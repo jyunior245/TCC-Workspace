@@ -2,6 +2,11 @@ import sys
 import os
 from flask import Flask
 from dotenv import load_dotenv
+from app.services.ai_service import HealthAgent
+from app.services.rag_service import rag_service
+from app.extensions.sql_alchemy import db
+from app.models.user import User
+from urllib.parse import quote_plus
 
 # Adiciona o diretório atual ao path para importar os serviços
 sys.path.append(os.getcwd())
@@ -9,10 +14,7 @@ sys.path.append(os.getcwd())
 _basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(os.path.dirname(_basedir), '.env'))
 
-from app.services.ai_service import HealthAgent
-from app.services.rag_service import rag_service
-from app.extensions.sql_alchemy import db
-from app.models.user import User
+
 
 # Criamos um app Flask mínimo para que o SQLAlchemy funcione fora do servidor real
 def create_test_app():
@@ -29,7 +31,6 @@ def create_test_app():
     db_password = os.getenv("POSTGRES_PASSWORD", "password")
     db_name = os.getenv("DATABASE_NAME", "postgres")
     
-    from urllib.parse import quote_plus
     safe_password = quote_plus(db_password)
     
     app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{safe_password}@{db_host}:5432/{db_name}"

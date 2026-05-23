@@ -1,13 +1,10 @@
 import logging
-import sys
 import os
 from zeep import Client, Settings
 from zeep.wsse.username import UsernameToken
 from zeep.plugins import HistoryPlugin
 from lxml import etree
 from zeep.transports import Transport
-import os
-import redis
 import csv
 import json
 from app.extensions.redis_ext import redis_client_ext
@@ -102,7 +99,6 @@ class CNESService:
         history = HistoryPlugin()
         ibge_6 = str(ibge_code)[:6]
         logger.debug(f"\n[SOA-CNES-DEBUG] === INICIANDO CONSULTA IBGE {ibge_6} ===")
-        sys.stdout.flush()
 
         try:
             settings = Settings(strict=False, xml_huge_tree=True)

@@ -6,6 +6,9 @@ import logging
 import uuid
 import requests
 from flask import jsonify, url_for, current_app
+from app.services.auth_service import AuthService
+
+logger = logging.getLogger(__name__)
 
 class RegistrationService:
     @staticmethod
@@ -132,8 +135,6 @@ class RegistrationService:
     @staticmethod
     def finalize_voice_registration(collected_data, session, session_id, voice_service):
 
-        logger = logging.getLogger(__name__)
-
         # --- AUTO CEP FETCH ---
         if 'cep' not in collected_data and 'state' in collected_data and 'city' in collected_data:
             state_uf = str(collected_data['state']).strip()
@@ -163,7 +164,6 @@ class RegistrationService:
 
             # 1. Firebase
             try:
-                from app.services.auth_service import AuthService
                 fb_user = AuthService.create_firebase_user(email, password)
                 user_id = fb_user['localId']
             except Exception as e:

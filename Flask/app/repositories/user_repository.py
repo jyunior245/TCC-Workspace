@@ -3,6 +3,12 @@ from app.extensions.sql_alchemy import db
 from app.models.user import User
 from app.models.patient import Patient
 from app.models.agent import HealthAgent
+import random
+import string
+from sqlalchemy.exc import IntegrityError
+from app.models.chat_history import ChatHistory
+
+
 
 class UserRepository:
     @staticmethod
@@ -63,8 +69,6 @@ class UserRepository:
 
     @staticmethod
     def _generate_patient_code(length=6):
-        import random
-        import string
         while True:
             code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
             # Check if code already exists to ensure uniqueness
@@ -73,7 +77,6 @@ class UserRepository:
 
     @staticmethod
     def create_patient_profile(user_id, data):
-        from sqlalchemy.exc import IntegrityError
         try:
             profile = Patient.query.get(user_id)
             if profile:
@@ -152,8 +155,6 @@ class UserRepository:
     @staticmethod
     def delete_user_completely(user_id):
         try:
-            from app.models.chat_history import ChatHistory
-            
             # 1. Recuperar usuário
             user = User.query.get(user_id)
             if not user:

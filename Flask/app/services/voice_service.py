@@ -6,6 +6,7 @@ import os
 import tempfile
 import re
 import logging
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,6 @@ class VoiceService:
 
     def generate_base64_audio(self, text):
         """Transforma texto em áudio natural e retorna em base64."""
-        import base64
         if not text:
             return None
 

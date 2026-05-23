@@ -1,8 +1,10 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from app.services.auth_service import AuthService
 from app.repositories.user_repository import UserRepository
+import logging
 
 login_bp = Blueprint('login', __name__)
+logger = logging.getLogger(__name__)
 
 @login_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -40,7 +42,7 @@ def login():
 
         except Exception as e:
             flash(f"Não conseguimos entrar: {str(e)}", "error")
-            print(f"Login error: {e}")
+            logger.error(f"Login error: {e}", exc_info=True)
 
     return render_template('login.html')
 

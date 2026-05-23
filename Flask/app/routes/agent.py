@@ -8,6 +8,8 @@ from datetime import datetime, timezone, timedelta
 from app.utils.decorators import agent_required
 from app.repositories.daily_report_repository import DailyReportRepository
 import logging
+import markdown
+from flask_weasyprint import HTML, render_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -189,8 +191,7 @@ def download_report(report_id):
     if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
         return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
 
-    import markdown
-    from flask_weasyprint import HTML, render_pdf
+    
     
     # Converte o markdown para HTML
     html_content = markdown.markdown(report.content)
