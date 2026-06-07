@@ -4,6 +4,8 @@ node_modules/
 relatorios
 venv
 
+android/
+
 tcc-ia-health-firebase-adminsdk-fbsvc-d6db125a3f.json
 
 *.pyc
