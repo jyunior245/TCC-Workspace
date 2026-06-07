@@ -18,8 +18,6 @@ agent_bp = Blueprint('agent', __name__, url_prefix='/agent')
 @agent_bp.route('/dashboard')
 @agent_required
 def dashboard():
-    if not session.get('is_active', False):
-         return redirect(url_for('register.complete_registration'))
 
     agent_id = session['user_id']
     user = UserRepository.get_user_by_id(agent_id)

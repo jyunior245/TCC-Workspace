@@ -11,7 +11,7 @@ group_service = PatientGroupService()
 def list_groups():
     agent_id = session['user_id']
     groups = group_service.get_all_groups_by_agent(agent_id)
-    return render_template('acs/groups.html', groups=groups)
+    return render_template('groups.html', groups=groups)
 
 @group_bp.route('/create', methods=['POST'])
 @agent_required
@@ -42,7 +42,7 @@ def group_details(group_id):
         group_patient_ids = [p.id for p in group.patients]
         available_patients = [p for p in all_agent_patients if p.id not in group_patient_ids]
 
-        return render_template('acs/group_details.html', group=group, available_patients=available_patients)
+        return render_template('group_details.html', group=group, available_patients=available_patients)
     except Exception as e:
         flash(f"Erro ao acessar grupo: {str(e)}", "error")
         return redirect(url_for('groups.list_groups'))

@@ -13,10 +13,6 @@ logger = logging.getLogger(__name__)
 @patient_bp.route('/dashboard')
 @patient_required
 def dashboard():
-    # Checa se o usuário está ativo
-    if not session.get('is_active', False):
-         return redirect(url_for('register.complete_registration'))
-         
     # Fetch patient profile to get the patient_code and email
     user = UserRepository.get_user_by_id(session['user_id'])
     

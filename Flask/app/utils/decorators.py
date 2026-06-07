@@ -73,6 +73,12 @@ def agent_required(f):
                 return jsonify({'success': False, 'message': 'Acesso negado'}), 403
             flash("Acesso restrito a Agentes de Saúde.", "error")
             return redirect(url_for('index.index'))
+            
+        if not session.get('is_active', False):
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Por favor, complete seu cadastro primeiro.'}), 403
+            return redirect(url_for('register.complete_registration'))
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -85,5 +91,11 @@ def patient_required(f):
                 return jsonify({'success': False, 'message': 'Acesso negado'}), 403
             flash("Acesso restrito a Pacientes.", "error")
             return redirect(url_for('index.index'))
+            
+        if not session.get('is_active', False):
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Por favor, complete seu cadastro primeiro.'}), 403
+            return redirect(url_for('register.complete_registration'))
+            
         return f(*args, **kwargs)
     return decorated_function
