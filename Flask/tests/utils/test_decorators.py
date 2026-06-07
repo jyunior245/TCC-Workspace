@@ -106,3 +106,47 @@ def test_patient_required_forbidden(mocker, mock_flask_env):
         
     response, status_code = dummy_route()
     assert status_code == 403
+
+def test_agent_required_not_active(mocker, mock_flask_env):
+    """Testa agent_required negando acesso a um health_agent inativo."""
+    mocker.patch('app.utils.decorators.session', {'user_id': 'user123', 'user_type': 'health_agent', 'is_active': False})
+    
+    @agent_required
+    def dummy_route():
+        return "sucesso"
+        
+    response, status_code = dummy_route()
+    assert status_code == 403
+
+def test_agent_required_success(mocker, mock_flask_env):
+    """Testa agent_required permitindo acesso a um health_agent ativo."""
+    mocker.patch('app.utils.decorators.session', {'user_id': 'user123', 'user_type': 'health_agent', 'is_active': True})
+    
+    @agent_required
+    def dummy_route():
+        return "sucesso"
+        
+    result = dummy_route()
+    assert result == "sucesso"
+
+def test_patient_required_not_active(mocker, mock_flask_env):
+    """Testa patient_required negando acesso a um patient inativo."""
+    mocker.patch('app.utils.decorators.session', {'user_id': 'user123', 'user_type': 'patient', 'is_active': False})
+    
+    @patient_required
+    def dummy_route():
+        return "sucesso"
+        
+    response, status_code = dummy_route()
+    assert status_code == 403
+
+def test_patient_required_success(mocker, mock_flask_env):
+    """Testa patient_required permitindo acesso a um patient ativo."""
+    mocker.patch('app.utils.decorators.session', {'user_id': 'user123', 'user_type': 'patient', 'is_active': True})
+    
+    @patient_required
+    def dummy_route():
+        return "sucesso"
+        
+    result = dummy_route()
+    assert result == "sucesso"
