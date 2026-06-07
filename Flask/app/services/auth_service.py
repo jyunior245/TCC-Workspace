@@ -38,7 +38,7 @@ class AuthService:
             else:
                 return f"Erro do Firebase: {error_code}"
         except Exception as ex:
-            return f"Erro desconhecido: {str(ex)}"
+            return f"Erro desconhecido: {str(e)}"
 
     @staticmethod
     def create_firebase_user(email, password):

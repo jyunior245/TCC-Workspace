@@ -1,0 +1,18 @@
+{
+  "appId": "com.example.app",
+  "appName": "TccHealth",
+  "webDir": "dist",
+  "android": {
+    "path": "../android"
+  },
+  "server": {
+    "url": "https://fb4366215a77c6.lhr.life",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 2000
+    }
+  }
+}

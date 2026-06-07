@@ -199,54 +199,27 @@ class CNESService:
                  
             raise e
 
-    @staticmethod
-    def get_profissional_info(cpf: str) -> dict:
-        try:
-            cpf_clean = "".join(filter(str.isdigit, cpf))
-            
-            settings = Settings(strict=False, xml_huge_tree=True)
-            transport = Transport(timeout=15)
-            
-            cnes_user = os.getenv("CNES_USER", "CNES.PUBLICO")
-            cnes_pass = os.getenv("CNES_PASSWORD", "cnes#2015public")
 
-            client = Client(
-                wsdl=CNESService._PROFISSIONAL_WSDL_URL,
-                wsse=UsernameToken(cnes_user, cnes_pass),
-                settings=settings,
-                transport=transport
-            )
-            
-            service = client.bind('ProfissionalSaudeService', 'ProfissionalSaudeServicePort')
-            
-            response = service.consultarProfissionalSaude(
-                FiltroPesquisaProfissionalSaude={
-                    'CPF': {'numeroCPF': cpf_clean}
-                }
-            )
-            
-            cbo_codigo = "5151-05" # Default fallback
-            cbo_descricao = "Agente comunitário de saúde"
-            
-            if hasattr(response, 'ProfissionalSaude') and response.ProfissionalSaude:
-                prof = response.ProfissionalSaude
-                cbo_obj = getattr(prof, 'CBO', None)
-                if cbo_obj:
-                    cbo_codigo = getattr(cbo_obj, 'codigoCBO', cbo_codigo)
-                    cbo_descricao = getattr(cbo_obj, 'descricaoCBO', cbo_descricao)
-                    
-            return {
-                'cbo': cbo_codigo,
-                'cbo_descricao': cbo_descricao,
-                'microarea': '', # Requer input manual do usuário, sem API
-                'fonte': 'api_cnes'
-            }
-            
+
+    @staticmethod
+    def check_cbo_local(cbo_code: str) -> dict:
+        """
+        Busca o CBO no arquivo CSV local.
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        csv_path = os.path.join(base_dir, 'data', 'cbo_cnes.csv')
+        
+        try:
+            if os.path.exists(csv_path):
+                with open(csv_path, mode='r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if row.get('codigo_cbo') == cbo_code:
+                            return {
+                                'codigo_cbo': row.get('codigo_cbo'),
+                                'nome_cbo': row.get('nome_cbo')
+                            }
         except Exception as e:
-            logger.error(f"[SOA-CNES] Erro ao buscar CBO para CPF {cpf}: {e}", exc_info=True)
-            return {
-                'cbo': '5151-05',
-                'cbo_descricao': 'Agente comunitário de saúde',
-                'microarea': '',
-                'fonte': 'fallback_cnes_error'
-            }
+            logger.error(f"Erro ao ler CSV de CBO: {e}", exc_info=True)
+            
+        return None

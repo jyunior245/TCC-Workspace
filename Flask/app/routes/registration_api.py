@@ -8,32 +8,16 @@ import os
 import uuid
 import traceback
 from flask import Blueprint, request, jsonify, session, url_for, current_app
-from app.services.registration_agent import registration_agent
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.cnes_service import CNESService
-from app.services.registration_service import RegistrationService
 from app.models.patient import Patient
 from app.models.user import User
-from app.extensions.redis_ext import redis_client_ext
 
 
 registration_api_bp = Blueprint('registration_api', __name__)
 
-redis_client = redis_client_ext.client
 
-def get_reg_state(session_id):
-    if not redis_client or not session_id: return None
-    data = redis_client.get(f"reg_state:{session_id}")
-    return json.loads(data) if data else None
-
-def save_reg_state(session_id, state):
-    if redis_client and session_id:
-        redis_client.setex(f"reg_state:{session_id}", 3600, json.dumps(state))
-
-def clear_reg_state(session_id):
-    if redis_client and session_id:
-        redis_client.delete(f"reg_state:{session_id}")
 
 
 @registration_api_bp.route('/api/check_cpf', methods=['POST'])
@@ -62,103 +46,23 @@ def get_ubs():
 
     return jsonify({'ubs': ubs_list, 'fonte': fonte})
 
-@registration_api_bp.route('/api/registration_chat/start', methods=['POST'])
-def start_registration():
-    # Inicia a sessão completamente zerada para um novo cadastro
-    state = {
-        'current_step': 0,
-        'collected_data': {},
-        'sub_state': 'ASKING',
-        'temp_val': None
-    }
-    
-    session_id = uuid.uuid4().hex
-    session['reg_session_id'] = session_id
-    save_reg_state(session_id, state)
-    
-    first_question = registration_agent.get_question_for_step(0)
-    audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(first_question)
-    
-    return jsonify({
-        'response': first_question,
-        'audio_b64': audio_b64,
-        'status': 'IN_PROGRESS',
-        'progress': 0
-    })
 
-@registration_api_bp.route('/api/registration_chat/cancel', methods=['POST'])
-def cancel_registration():
-    session_id = session.pop('reg_session_id', None)
-    if session_id:
-        clear_reg_state(session_id)
-    return jsonify({'status': 'CANCELLED'})
 
-@registration_api_bp.route('/api/registration_chat/message', methods=['POST'])
-def chat_message():
-    data = request.get_json()
-    user_message = data.get('message', '')
-    
-    session_id = session.get('reg_session_id')
-    state = get_reg_state(session_id)
-    if not state:
-        return jsonify({'error': 'Conversa não iniciada.'}), 400
-        
-    result = registration_agent.handle_chat_interaction(user_message, state, current_app.extensions['services'].voice_service)
-    
-    if result.get('state_changed'):
-        save_reg_state(session_id, state)
-        session.modified = True
-        
-    if not result.get('continue'):
-        return jsonify({
-            'response': result.get('response', ''),
-            'audio_b64': result.get('audio_b64', ''),
-            'status': result.get('status', 'IN_PROGRESS'),
-            'progress': result.get('progress', 0)
-        })
-    
-    next_step = state['current_step']
-    total_steps = len(registration_agent.fields_sequence)
-    
-    if next_step < total_steps:
-        # Fazer próxima pergunta
-        next_q = registration_agent.get_question_for_step(next_step)
-        progress_pct = int((next_step / total_steps) * 100)
-        
-        audio_b64 = current_app.extensions['services'].voice_service.generate_base64_audio(next_q)
-        return jsonify({
-            'response': next_q,
-            'audio_b64': audio_b64,
-            'status': 'IN_PROGRESS',
-            'progress': progress_pct
-        })
+
+
+
+
+@registration_api_bp.route('/api/cbo', methods=['GET'])
+def get_cbo_info():
+    """
+    Busca informações do CBO no arquivo CSV local.
+    """
+    cbo = request.args.get('codigo')
+    if not cbo:
+        return jsonify({'error': 'Código CBO ausente'}), 400
+
+    info = CNESService.check_cbo_local(cbo)
+    if info:
+        return jsonify(info)
     else:
-        # FIM! Processar persistência no BD final
-        collected = state['collected_data']
-    
-        response_json = RegistrationService.finalize_voice_registration(
-            collected, 
-            session, 
-            session_id, 
-            current_app.extensions['services'].voice_service
-        )
-        
-        # Limpa o state
-        session.pop('reg_session_id', None)
-        clear_reg_state(session_id)
-        
-        return response_json
-
-
-@registration_api_bp.route('/api/profissional_info', methods=['GET'])
-def get_profissional_info():
-    """
-    Busca informações do profissional de saúde (CBO).
-    """
-    cpf = request.args.get('cpf')
-    if not cpf:
-        return jsonify({'error': 'CPF ausente'}), 400
-
-    info = CNESService.get_profissional_info(cpf)
-    return jsonify(info)
-    
+        return jsonify({'error': 'CBO não encontrado'}), 404

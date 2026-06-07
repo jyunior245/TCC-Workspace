@@ -428,9 +428,8 @@ Histórico Recente de Relatórios do Paciente:
 
 JSON gerado:
 """
-        response_text = self._call_llama(triage_prompt, json_format=True).strip()
-        
         try:
+            response_text = self._call_llama(triage_prompt, json_format=True).strip()
             triage_data = json.loads(response_text)
             
             # Garante que as chaves existem
@@ -446,7 +445,7 @@ JSON gerado:
             triage_data["nivel"] = nivel
             return triage_data
         except json.JSONDecodeError as e:
-            logger.error(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text}", exc_info=True)
+            logger.error(f"[AI TRIAGE ERROR] Falha ao parsear JSON: {e}\nResposta Bruta: {response_text if 'response_text' in locals() else 'N/A'}", exc_info=True)
             return {"nivel": "BAIXA", "justificativa": "Erro ao tentar ler o formato devolvido pela Inteligência Artificial. Recomendável ver os relatórios manualmente."}
         except Exception as e:
             logger.error(f"[AI TRIAGE ERROR] Erro inesperado: {e}", exc_info=True)
