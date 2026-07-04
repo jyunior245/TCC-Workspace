@@ -1,0 +1,127 @@
+
+
+.patient-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        border-bottom: 1px solid var(--md-sys-color-surface-variant);
+    }
+    .patient-list-item:last-child {
+        border-bottom: none;
+    }
+    .patient-info-small {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .patient-avatar-small {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        font-size: 1.2rem;
+    }
+    .md-select {
+        position: relative;
+        width: 100%;
+        height: 56px;
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 4px 4px 0 0;
+        border-bottom: 1px solid var(--md-sys-color-on-surface-variant);
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+    }
+    .md-select select {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--md-sys-color-on-surface);
+        font-size: 1rem;
+        appearance: none;
+        cursor: pointer;
+    }
+    .md-select::after {
+        content: '\e5c5';
+        font-family: 'Material Icons Outlined';
+        position: absolute;
+        right: 16px;
+        pointer-events: none;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+    
+    /* Custom Select Modal Styles */
+    .custom-select-trigger {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 56px;
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 8px;
+        border: 1px solid transparent;
+        padding: 0 16px;
+        cursor: pointer;
+        color: var(--md-sys-color-on-surface);
+        transition: all 0.2s ease;
+    }
+    .custom-select-trigger:hover {
+        background: #d0d9d1;
+    }
+    .patient-select-list {
+        display: flex;
+        flex-direction: column;
+    }
+    .patient-select-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--md-sys-color-surface-variant);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .patient-select-item:hover {
+        background: var(--md-sys-color-secondary-container);
+    }
+    .patient-select-item:last-child {
+        border-bottom: none;
+    }
+    .patient-select-item .patient-info {
+        flex: 1;
+    }
+    .patient-select-item .patient-info h3 {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 500;
+    }
+    .patient-select-item .patient-info p {
+        margin: 4px 0 0;
+        font-size: 0.85rem;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+    .conditions-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+        max-width: 250px;
+    }
+    .condition-chip {
+        background: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }

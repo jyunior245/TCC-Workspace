@@ -60,14 +60,5 @@
     </div>
 </div>
 
-<script>
-function copyToClipboard(elementId) {
-    var text = document.getElementById(elementId).innerText;
-    navigator.clipboard.writeText(text).then(function() {
-        alert('Copiado para a área de transferência!');
-    }, function(err) {
-        console.error('Erro ao copiar: ', err);
-    });
-}
-</script>
+<script src="{{ url_for('static', filename='js/agent_register_success.js') }}"></script>
 {% endblock %}

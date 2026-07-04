@@ -1,0 +1,127 @@
+
+
+/* Core Layout Classes - RESTORED */
+    .hidden-input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .tactile-card {
+        display: block; flex: 1; cursor: pointer;
+        border: 2px solid var(--md-sys-color-outline-variant);
+        border-radius: 16px; padding: 12px;
+        background: var(--md-sys-color-surface); transition: all 0.2s; text-align: center;
+        height: 100%;
+    }
+    .tactile-card .card-content {
+        display: flex; flex-direction: column; align-items: center; gap: 8px;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+    .radio-card input:checked + .card-content, .checkbox-card input:checked + .card-content {
+        color: var(--md-sys-color-primary);
+    }
+    .radio-card:has(input:checked), .checkbox-card:has(input:checked) {
+        border-color: var(--md-sys-color-primary);
+        background: var(--md-sys-color-primary-container);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .section-title { font-weight: 500; margin-top: 32px; margin-bottom: 24px; font-size: 1.3rem; color: var(--md-sys-color-on-surface); text-align: left; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--md-sys-color-surface-variant); border-radius: 12px; margin-bottom: 16px; }
+    
+    /* Select Styling - Integrated with Material Look */
+    .md-text-field { position: relative; margin-bottom: 16px; width: 100%; }
+    .md-text-field select {
+        width: 100%;
+        color: #1c1b1f !important;
+        border: 2px solid #79747e !important;
+        background-color: #fff !important;
+        height: 56px !important;
+        border-radius: 4px !important;
+        padding: 0 16px !important;
+        font-size: 1rem;
+        outline: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        cursor: pointer;
+    }
+    .md-text-field label {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: white;
+        padding: 0 4px;
+        color: #49454f;
+        transition: all 0.2s;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .md-text-field:has(select)::after {
+        content: '\e5cf';
+        font-family: 'Material Icons';
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #79747e;
+        font-size: 24px;
+    }
+    .md-text-field select:focus + label,
+    .md-text-field select.has-value + label {
+        top: 0;
+        transform: translateY(-50%) scale(0.85);
+        color: var(--md-sys-color-primary, #6750a4);
+    }
+
+    .locked-field { pointer-events: none; opacity: 0.7; background: var(--md-sys-color-surface-variant) !important; }
+    #address-loading { display: none; margin-bottom: 8px; font-size: 14px; color: var(--md-sys-color-primary); }
+    
+    /* Input sizing correction */
+    .md-text-field input { font-size: 18px !important; }
+    
+    /* Toggle Switch MD3 Emulation */
+    .md-switch-container { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--md-sys-color-surface-variant); border-radius: 12px; margin-bottom: 16px; cursor: pointer; }
+    .md-switch { position: relative; width: 52px; height: 32px; background: var(--md-sys-color-outline-variant); border-radius: 16px; transition: 0.3s; }
+    .md-switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; background: var(--md-sys-color-surface); border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .md-switch-input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .md-switch-input:checked + .md-switch { background: var(--md-sys-color-primary); }
+    .md-switch-input:checked + .md-switch::after { transform: translateX(20px); background: var(--md-sys-color-on-primary); }
+    .md-switch-label { font-size: 16px; font-weight: 500; color: var(--md-sys-color-on-surface); flex: 1; margin-right: 16px; display: flex; align-items: center; gap: 8px; }
+    
+    /* Action Buttons size correction */
+    .action-buttons { display: flex; gap: 12px; margin-top: 16px; }
+    .action-buttons .md-button { height: 56px !important; font-size: 16px; }
+
+    /* Toast Message Styling */
+    #toast-message {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #f44336; /* Material Red */
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-size: 16px;
+        font-weight: 500;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease-in-out;
+    }
+    #toast-message.show {
+        opacity: 1;
+    }
+    
+    .domain-btn {
+        background: var(--md-sys-color-surface-variant);
+        color: var(--md-sys-color-on-surface-variant);
+        border: none;
+        border-radius: 16px;
+        padding: 4px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }

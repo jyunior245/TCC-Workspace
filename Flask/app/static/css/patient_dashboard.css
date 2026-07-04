@@ -1,0 +1,60 @@
+
+
+.original-banner-wrapper {
+            background-color: var(--md-sys-color-error-container);
+            color: var(--md-sys-color-on-error-container);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 16px 16px 0 16px;
+            border-radius: 12px;
+        }
+        .original-banner-btn {
+            background-color: var(--md-sys-color-error);
+            color: var(--md-sys-color-on-error);
+            flex-shrink: 0;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            padding: 0 24px;
+            font-weight: 500;
+            cursor: pointer;
+            width: fit-content; /* CORRIGE O PROBLEMA DO BOTÃO ESTICADO (BARRA VERMELHA) */
+            min-width: max-content;
+            transition: opacity 0.2s;
+        }
+        .original-banner-btn:hover { opacity: 0.9; }
+        
+        @media (max-width: 768px) {
+            .original-banner-wrapper {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px 16px;
+            }
+            .original-banner-wrapper > div { flex-direction: column; }
+        }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.domain-btn {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border: none;
+    border-radius: 16px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+
+/* Correção da Label do Modal */
+#newEmailInput:focus + label, 
+#newEmailInput:not(:placeholder-shown) + label,
+#newEmailInput:-webkit-autofill + label {
+    top: 0 !important; 
+    transform: translateY(-50%) scale(0.85) !important; 
+    color: var(--md-sys-color-primary) !important;
+}

@@ -426,29 +426,7 @@ function initPatientDashboard() {
 
 
 
-  setTimeout(() => {
-    const rl = document.getElementById('reportsLoading');
-    const re = document.getElementById('reportsEmpty');
-    const list = document.getElementById('reportsList');
-    if (rl && re && list) {
-      rl.classList.add('hidden');
-      const cards = [
-        { title: 'Resumo Semanal', period: '08–14 Fev', metrics: 'Passos: 38k • Sono: 7h/dia' },
-        { title: 'Glicemia', period: 'Jan', metrics: 'Média: 92 mg/dL • Picos: 2' }
-      ];
-      if (cards.length === 0) {
-        re.classList.remove('hidden');
-      } else {
-        list.innerHTML = cards.map(c => cardReport(c)).join('');
-      }
-      list.addEventListener('click', e => {
-        const btn = e.target.closest('.btn-details');
-        if (btn) {
-          alert('Ver Detalhes');
-        }
-      });
-    }
-  }, 1100);
+
 }
 
 if (document.readyState === 'loading') {
@@ -457,13 +435,153 @@ if (document.readyState === 'loading') {
   initPatientDashboard();
 }
 
-function cardReport(c) {
-  return `<div class="card report-card" tabindex="0" role="article" aria-label="${c.title}">
-    <div class="title-medium">${c.title}</div>
-    <div class="body-medium">${c.period}</div>
-    <div class="body-large" style="margin-top:8px">${c.metrics}</div>
-    <div class="actions">
-      <button class="btn btn-tonal btn-details">Ver Detalhes</button>
-    </div>
-  </div>`;
+
+
+
+function openSettingsModal() {
+    document.getElementById('settingsModal').classList.add('active');
+    document.getElementById('settingsModal').setAttribute('aria-hidden', 'false');
 }
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('active');
+    document.getElementById('settingsModal').setAttribute('aria-hidden', 'true');
+}
+
+// Fechar modal ao clicar na película preta externa (overlay)
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeSettingsModal();
+    }
+});
+
+function confirmDeleteAccount() {
+    if (!confirm("Esta ação é irreversível. Todos os seus dados, histórico de saúde e acesso serão apagados permanentemente de nossa base e do Google. Continuar?")) {
+        return;
+    }
+
+    fetch('/delete_account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = data.redirect_url;
+        } else {
+            alert("Erro: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Erro de rede.");
+    });
+}
+
+function openEmailUpdateModal() {
+    document.getElementById('emailUpdateModal').classList.add('active');
+    document.getElementById('emailUpdateModal').setAttribute('aria-hidden', 'false');
+    
+    // Forçar verificação de estado da label ao abrir (caso autofill já esteja preenchido)
+    const input = document.getElementById('newEmailInput');
+    if (input.value) {
+        input.classList.add('has-value');
+    }
+}
+
+let emailSyncInterval = null;
+window.isEmailSyncing = false;
+
+function closeEmailUpdateModal() {
+    if (window.isEmailSyncing) return; // Bloqueia o fechamento se estiver esperando verificação
+    document.getElementById('emailUpdateModal').classList.remove('active');
+    document.getElementById('emailUpdateModal').setAttribute('aria-hidden', 'true');
+}
+
+function appendDomain(domain) {
+    const input = document.getElementById('newEmailInput');
+    let val = input.value;
+    if (val.includes('@')) {
+        val = val.split('@')[0];
+    }
+    input.value = val + domain;
+    input.focus(); 
+}
+
+function submitEmailUpdate() {
+    const email = document.getElementById('newEmailInput').value;
+    if(!email || !email.includes('@')) {
+        alert("Por favor, insira um e-mail válido.");
+        return;
+    }
+    
+    const btn = document.getElementById('submitEmailBtn');
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons-outlined spin">sync</span> Salvando...';
+    
+    fetch('/patient/update_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            // Modifica o modal para exibir mensagem de espera bloqueada
+            window.isEmailSyncing = true;
+            
+            const closeBtn = document.querySelector('#emailUpdateModal .modal-close');
+            if (closeBtn) closeBtn.style.display = 'none';
+            
+            const contentDiv = document.querySelector('#emailUpdateModal .settings-content');
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 16px 8px;">
+                    <span class="material-icons-outlined spin" style="font-size: 48px; color: var(--md-sys-color-primary); margin-bottom: 16px; display: inline-block;">hourglass_empty</span>
+                    <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 500; color: var(--md-sys-color-on-surface);">Confirme seu E-mail</h3>
+                    <p style="margin: 0; font-size: 15px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;">
+                        Enviamos um link de verificação para:<br>
+                        <strong style="color: var(--md-sys-color-primary);">${email}</strong>
+                    </p>
+                    <div style="margin-top: 24px; padding: 12px; background: var(--md-sys-color-surface-variant); border-radius: 8px;">
+                        <p style="margin: 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">
+                            Acesse sua caixa de entrada e clique no link.<br>
+                            Esta janela fechará automaticamente.
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            // Inicia o Polling
+            emailSyncInterval = setInterval(() => {
+                fetch('/patient/check_email_sync')
+                .then(r => r.json())
+                .then(syncData => {
+                    if (syncData.synced) {
+                        clearInterval(emailSyncInterval);
+                        window.isEmailSyncing = false;
+                        window.location.reload(); // Recarrega para sumir a barra e atualizar os dados
+                    }
+                })
+                .catch(err => console.log("Erro no polling:", err));
+            }, 3000); // Checa a cada 3 segundos
+            
+        } else {
+            alert("Erro: " + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    })
+    .catch(err => {
+        alert("Erro na conexão.");
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    });
+}
+
+// Bloqueia clique fora do modal se estiver sincronizando
+document.getElementById('emailUpdateModal').addEventListener('click', function(e) {
+    if (window.isEmailSyncing && e.target === this) {
+        e.stopPropagation();
+    }
+});

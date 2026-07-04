@@ -144,28 +144,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/password_meter.js') }}"></script>
 <script src="{{ url_for('static', filename='js/voice_nav.js') }}"></script>
-<script>
-function appendDomain(domain) {
-    const input = document.getElementById('email');
-    let val = input.value;
-    if (val.includes('@')) {
-        val = val.split('@')[0];
-    }
-    input.value = val + domain;
-    input.focus();
-}
-</script>
-<style>
-.domain-btn {
-    background: var(--md-sys-color-surface-variant);
-    color: var(--md-sys-color-on-surface-variant);
-    border: none;
-    border-radius: 16px;
-    padding: 4px 10px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
-</style>
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 {% endblock %}

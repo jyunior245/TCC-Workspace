@@ -1,0 +1,13 @@
+
+
+.domain-btn {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border: none;
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.domain-btn:hover { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }

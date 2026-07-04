@@ -3,134 +3,8 @@
 {% block title %}Detalhes do Grupo{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}">
-<style>
-    .patient-list-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px;
-        border-bottom: 1px solid var(--md-sys-color-surface-variant);
-    }
-    .patient-list-item:last-child {
-        border-bottom: none;
-    }
-    .patient-info-small {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-    .patient-avatar-small {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: var(--md-sys-color-primary);
-        color: var(--md-sys-color-on-primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 500;
-        font-size: 1.2rem;
-    }
-    .md-select {
-        position: relative;
-        width: 100%;
-        height: 56px;
-        background: var(--md-sys-color-surface-variant);
-        border-radius: 4px 4px 0 0;
-        border-bottom: 1px solid var(--md-sys-color-on-surface-variant);
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-    }
-    .md-select select {
-        width: 100%;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: var(--md-sys-color-on-surface);
-        font-size: 1rem;
-        appearance: none;
-        cursor: pointer;
-    }
-    .md-select::after {
-        content: '\e5c5';
-        font-family: 'Material Icons Outlined';
-        position: absolute;
-        right: 16px;
-        pointer-events: none;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-    
-    /* Custom Select Modal Styles */
-    .custom-select-trigger {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        height: 56px;
-        background: var(--md-sys-color-surface-variant);
-        border-radius: 8px;
-        border: 1px solid transparent;
-        padding: 0 16px;
-        cursor: pointer;
-        color: var(--md-sys-color-on-surface);
-        transition: all 0.2s ease;
-    }
-    .custom-select-trigger:hover {
-        background: #d0d9d1;
-    }
-    .patient-select-list {
-        display: flex;
-        flex-direction: column;
-    }
-    .patient-select-item {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 16px 24px;
-        border-bottom: 1px solid var(--md-sys-color-surface-variant);
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    .patient-select-item:hover {
-        background: var(--md-sys-color-secondary-container);
-    }
-    .patient-select-item:last-child {
-        border-bottom: none;
-    }
-    .patient-select-item .patient-info {
-        flex: 1;
-    }
-    .patient-select-item .patient-info h3 {
-        margin: 0;
-        font-size: 1.05rem;
-        font-weight: 500;
-    }
-    .patient-select-item .patient-info p {
-        margin: 4px 0 0;
-        font-size: 0.85rem;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-    .conditions-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        justify-content: flex-end;
-        max-width: 250px;
-    }
-    .condition-chip {
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/group_details.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -224,23 +98,23 @@
         <div class="sections-container">
             <!-- Adicionar Paciente -->
             <section class="section">
-                <div class="md-card elevated" style="max-width: 100%; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end;">
-                    <div style="flex: 1; min-width: 300px;">
-                        <h2 class="card-title" style="margin-bottom: 16px;">
+                <div class="md-card elevated" style="max-width: 100%; width: 100%; box-sizing: border-box; overflow: hidden;">
+                    <div style="width: 100%;">
+                        <h2 class="card-title" style="margin-bottom: 16px; text-align: center; justify-content: center;">
                             <span class="material-icons-outlined">person_add</span>
                             Adicionar Paciente ao Grupo
                         </h2>
                         
-                        <form action="{{ url_for('groups.add_patient', group_id=group.id) }}" method="POST" style="display: flex; gap: 16px; align-items: flex-end;">
-                            <div style="flex: 1;">
-                                <div class="custom-select-trigger" onclick="openPatientModal()">
+                        <form action="{{ url_for('groups.add_patient', group_id=group.id) }}" method="POST" class="link-patient-form" style="width: 100%; box-sizing: border-box; margin-top: 24px;">
+                            <div style="width: 100%; box-sizing: border-box;">
+                                <div class="custom-select-trigger" onclick="openPatientModal()" style="width: 100%; box-sizing: border-box;">
                                     <span class="material-icons-outlined" style="color: var(--md-sys-color-primary);">person_search</span>
-                                    <span id="selected_patient_name" style="flex: 1; font-size: 16px;">Selecione um paciente...</span>
+                                    <span id="selected_patient_name" style="flex: 1; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Selecione um paciente...</span>
                                     <span class="material-icons-outlined">expand_more</span>
                                 </div>
                                 <input type="hidden" name="patient_id" id="selected_patient_id" required>
                             </div>
-                            <button type="submit" class="md-button filled" style="height: 56px; padding: 0 32px;" {% if not available_patients %}disabled{% endif %}>
+                            <button type="submit" class="md-button filled btn-submit" style="align-self: center; width: 100%; max-width: 250px; padding: 0 32px; box-sizing: border-box;" {% if not available_patients %}disabled{% endif %}>
                                 Adicionar
                             </button>
                         </form>
@@ -376,41 +250,5 @@
     </div>
 </div>
 
-<script>
-    function openPatientModal() {
-        document.getElementById('patientModalScrim').style.display = 'flex';
-    }
-    
-    function closePatientModal() {
-        document.getElementById('patientModalScrim').style.display = 'none';
-    }
-    
-    function selectPatient(id, name) {
-        document.getElementById('selected_patient_id').value = id;
-        document.getElementById('selected_patient_name').innerText = name;
-        document.getElementById('selected_patient_name').style.fontWeight = '500';
-        document.getElementById('selected_patient_name').style.color = 'var(--md-sys-color-primary)';
-        closePatientModal();
-    }
-
-    // Fechar clicando fora do modal
-    document.getElementById('patientModalScrim').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closePatientModal();
-        }
-    });
-    function toggleSidebarMenu(menu) {
-        if(menu === 'settings') {
-            document.getElementById('main-sidebar-menu').style.display = 'none';
-            document.getElementById('settings-sidebar-menu').style.display = 'flex';
-        } else {
-            document.getElementById('main-sidebar-menu').style.display = 'flex';
-            document.getElementById('settings-sidebar-menu').style.display = 'none';
-        }
-    }
-
-    function toggleScreenReader() {
-        alert("O recurso de leitura de tela foi ativado.");
-    }
-</script>
+<script src="{{ url_for('static', filename='js/group_details.js') }}"></script>
 {% endblock %}

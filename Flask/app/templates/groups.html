@@ -3,56 +3,8 @@
 {% block title %}Grupos de Pacientes{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}">
-<style>
-    .groups-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 16px;
-        margin-top: 16px;
-    }
-    .group-card {
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .group-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-    .group-icon {
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .group-title {
-        font-size: 1.25rem;
-        font-weight: 500;
-        margin: 0;
-        color: var(--md-sys-color-on-surface);
-    }
-    .group-desc {
-        color: var(--md-sys-color-on-surface-variant);
-        font-size: 0.875rem;
-        margin-bottom: 16px;
-        flex-grow: 1;
-    }
-    .group-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-top: 1px solid var(--md-sys-color-surface-variant);
-        padding-top: 16px;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agent.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/groups.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -68,15 +20,15 @@
         <!-- Main Navigation Menu -->
         <div id="main-sidebar-menu" style="display: flex; flex-direction: column; flex: 1;">
             <nav class="sidebar-nav">
-                <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}';">
+                <button class="nav-item" data-href="{{ url_for('agent.dashboard') }}" onclick="window.location.href=this.dataset.href;">
                     <span class="material-icons-outlined">people</span>
                     <span>Meus Pacientes</span>
                 </button>
-                <button class="nav-item active" onclick="window.location.href='{{ url_for('groups.list_groups') }}';">
+                <button class="nav-item active" data-href="{{ url_for('groups.list_groups') }}" onclick="window.location.href=this.dataset.href;">
                     <span class="material-icons-outlined">folder_special</span>
                     <span>Grupos de Pacientes</span>
                 </button>
-                <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}?section=triage';">
+                <button class="nav-item" data-href="{{ url_for('agent.dashboard') }}?section=triage" onclick="window.location.href=this.dataset.href;">
                     <span class="material-icons-outlined">psychology</span>
                     <span>Triagem Inteligente</span>
                 </button>
@@ -139,16 +91,16 @@
                         <span class="material-icons-outlined">add_circle</span>
                         Criar Novo Grupo
                     </h2>
-                    <form action="{{ url_for('groups.create_group') }}" method="POST" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-top: 24px;">
-                        <div class="md-text-field" style="flex: 1; min-width: 250px; margin-bottom: 0;">
-                            <input type="text" name="name" id="name" placeholder=" " required>
-                            <label for="name">Nome do Grupo (ex: Diabéticos)</label>
+                    <form action="{{ url_for('groups.create_group') }}" method="POST" class="link-patient-form" style="margin-top: 24px; box-sizing: border-box; width: 100%;">
+                        <div class="md-text-field" style="width: 100%; box-sizing: border-box;">
+                            <input type="text" name="name" id="name" placeholder=" " required style="box-sizing: border-box;">
+                            <label for="name">Nome do Grupo</label>
                         </div>
-                        <div class="md-text-field" style="flex: 2; min-width: 300px; margin-bottom: 0;">
-                            <input type="text" name="description" id="description" placeholder=" ">
+                        <div class="md-text-field" style="width: 100%; box-sizing: border-box;">
+                            <input type="text" name="description" id="description" placeholder=" " style="box-sizing: border-box;">
                             <label for="description">Descrição (Opcional)</label>
                         </div>
-                        <button type="submit" class="md-button filled" style="height: 56px; padding: 0 32px;">
+                        <button type="submit" class="md-button filled btn-submit" style="align-self: center; width: 100%; max-width: 250px; padding: 0 32px; box-sizing: border-box;">
                             Criar Grupo
                         </button>
                     </form>
@@ -195,15 +147,15 @@
         </div>
 
         <nav class="bottom-nav">
-            <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}';">
+            <button class="nav-item" data-href="{{ url_for('agent.dashboard') }}" onclick="window.location.href=this.dataset.href;">
                 <span class="material-icons-outlined">people</span>
                 <span>Pacientes</span>
             </button>
-            <button class="nav-item active" onclick="window.location.href='{{ url_for('groups.list_groups') }}';">
+            <button class="nav-item active" data-href="{{ url_for('groups.list_groups') }}" onclick="window.location.href=this.dataset.href;">
                 <span class="material-icons-outlined">folder_special</span>
                 <span>Grupos</span>
             </button>
-            <button class="nav-item" onclick="window.location.href='{{ url_for('agent.dashboard') }}?section=triage';">
+            <button class="nav-item" data-href="{{ url_for('agent.dashboard') }}?section=triage" onclick="window.location.href=this.dataset.href;">
                 <span class="material-icons-outlined">psychology</span>
                 <span>Triagem</span>
             </button>
@@ -215,19 +167,5 @@
     </main>
 </div>
 
-<script>
-    function toggleSidebarMenu(menu) {
-        if(menu === 'settings') {
-            document.getElementById('main-sidebar-menu').style.display = 'none';
-            document.getElementById('settings-sidebar-menu').style.display = 'flex';
-        } else {
-            document.getElementById('main-sidebar-menu').style.display = 'flex';
-            document.getElementById('settings-sidebar-menu').style.display = 'none';
-        }
-    }
-
-    function toggleScreenReader() {
-        alert("O recurso de leitura de tela foi ativado.");
-    }
-</script>
+<script src="{{ url_for('static', filename='js/groups.js') }}"></script>
 {% endblock %}

@@ -3,21 +3,127 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --card-radius: 24px;
 
-  /* MD3 Tokens - ACS Emerald Palette */
-  --md-sys-color-primary: #006c4b;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #8cf8c6;
-  --md-sys-color-on-primary-container: #002114;
-  --md-sys-color-secondary: #4d6356;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #d0e8d7;
-  --md-sys-color-on-secondary-container: #0b1f15;
-  --md-sys-color-surface: #f7fbf2;
-  --md-sys-color-on-surface: #181d19;
-  --md-sys-color-surface-variant: #dce5dd;
-  --md-sys-color-on-surface-variant: #404943;
-  --md-sys-color-outline: #707973;
-  --md-sys-color-background: #f7fbf2;
+  /* Light Theme */
+  --md-sys-color-primary-light: #006c4b;
+  --md-sys-color-onprimary-light: #ffffff;
+  --md-sys-color-primarycontainer-light: #8af8c6;
+  --md-sys-color-onprimarycontainer-light: #002114;
+  --md-sys-color-secondary-light: #006c48;
+  --md-sys-color-onsecondary-light: #ffffff;
+  --md-sys-color-secondarycontainer-light: #8df7c2;
+  --md-sys-color-onsecondarycontainer-light: #002113;
+  --md-sys-color-tertiary-light: #00687b;
+  --md-sys-color-ontertiary-light: #ffffff;
+  --md-sys-color-tertiarycontainer-light: #afecff;
+  --md-sys-color-ontertiarycontainer-light: #001f27;
+  --md-sys-color-error-light: #ba1a1a;
+  --md-sys-color-onerror-light: #ffffff;
+  --md-sys-color-errorcontainer-light: #ffdad6;
+  --md-sys-color-onerrorcontainer-light: #410002;
+  --md-sys-color-primaryfixed-light: #8af8c6;
+  --md-sys-color-primaryfixeddim-light: #6ddbab;
+  --md-sys-color-onprimaryfixed-light: #002114;
+  --md-sys-color-onprimaryfixedvariant-light: #005138;
+  --md-sys-color-secondaryfixed-light: #8df7c2;
+  --md-sys-color-secondaryfixeddim-light: #70dba7;
+  --md-sys-color-onsecondaryfixed-light: #002113;
+  --md-sys-color-onsecondaryfixedvariant-light: #005235;
+  --md-sys-color-tertiaryfixed-light: #afecff;
+  --md-sys-color-tertiaryfixeddim-light: #57d6f6;
+  --md-sys-color-ontertiaryfixed-light: #001f27;
+  --md-sys-color-ontertiaryfixedvariant-light: #004e5d;
+  --md-sys-color-surfacedim-light: #d8dbd7;
+  --md-sys-color-surface-light: #fbfdf9;
+  --md-sys-color-surfacebright-light: #f8faf6;
+  --md-sys-color-surfacecontainerlowest-light: #ffffff;
+  --md-sys-color-surfacecontainerlow-light: #f2f4f0;
+  --md-sys-color-surfacecontainer-light: #eceeea;
+  --md-sys-color-surfacecontainerhigh-light: #e7e9e5;
+  --md-sys-color-surfacecontainerhighest-light: #e1e3df;
+  --md-sys-color-onsurface-light: #191c1a;
+  --md-sys-color-onsurfacevariant-light: #404943;
+  --md-sys-color-outline-light: #707973;
+  --md-sys-color-outlinevariant-light: #bfc9c1;
+  --md-sys-color-inversesurface-light: #2e312f;
+  --md-sys-color-inverseonsurface-light: #eff1ed;
+  --md-sys-color-inverseprimary-light: #6ddbab;
+  --md-sys-color-scrim-light: #000000;
+  --md-sys-color-shadow-light: #000000;
+
+  /* Dark Theme */
+  --md-sys-color-primary-dark: #6ddbab;
+  --md-sys-color-onprimary-dark: #003825;
+  --md-sys-color-primarycontainer-dark: #005138;
+  --md-sys-color-onprimarycontainer-dark: #8af8c6;
+  --md-sys-color-secondary-dark: #70dba7;
+  --md-sys-color-onsecondary-dark: #003824;
+  --md-sys-color-secondarycontainer-dark: #005235;
+  --md-sys-color-onsecondarycontainer-dark: #8df7c2;
+  --md-sys-color-tertiary-dark: #57d6f6;
+  --md-sys-color-ontertiary-dark: #003641;
+  --md-sys-color-tertiarycontainer-dark: #004e5d;
+  --md-sys-color-ontertiarycontainer-dark: #afecff;
+  --md-sys-color-error-dark: #ffb4ab;
+  --md-sys-color-onerror-dark: #690005;
+  --md-sys-color-errorcontainer-dark: #93000a;
+  --md-sys-color-onerrorcontainer-dark: #ffdad6;
+  --md-sys-color-primaryfixed-dark: #8af8c6;
+  --md-sys-color-primaryfixeddim-dark: #6ddbab;
+  --md-sys-color-onprimaryfixed-dark: #002114;
+  --md-sys-color-onprimaryfixedvariant-dark: #005138;
+  --md-sys-color-secondaryfixed-dark: #8df7c2;
+  --md-sys-color-secondaryfixeddim-dark: #70dba7;
+  --md-sys-color-onsecondaryfixed-dark: #002113;
+  --md-sys-color-onsecondaryfixedvariant-dark: #005235;
+  --md-sys-color-tertiaryfixed-dark: #afecff;
+  --md-sys-color-tertiaryfixeddim-dark: #57d6f6;
+  --md-sys-color-ontertiaryfixed-dark: #001f27;
+  --md-sys-color-ontertiaryfixedvariant-dark: #004e5d;
+  --md-sys-color-surfacedim-dark: #111412;
+  --md-sys-color-surface-dark: #191c1a;
+  --md-sys-color-surfacebright-dark: #373a37;
+  --md-sys-color-surfacecontainerlowest-dark: #0c0f0d;
+  --md-sys-color-surfacecontainerlow-dark: #191c1a;
+  --md-sys-color-surfacecontainer-dark: #1d201e;
+  --md-sys-color-surfacecontainerhigh-dark: #272b28;
+  --md-sys-color-surfacecontainerhighest-dark: #323633;
+  --md-sys-color-onsurface-dark: #e1e3df;
+  --md-sys-color-onsurfacevariant-dark: #bfc9c1;
+  --md-sys-color-outline-dark: #8a938c;
+  --md-sys-color-outlinevariant-dark: #404943;
+  --md-sys-color-inversesurface-dark: #e1e3df;
+  --md-sys-color-inverseonsurface-dark: #2e312f;
+  --md-sys-color-inverseprimary-dark: #006c4b;
+  --md-sys-color-scrim-dark: #000000;
+  --md-sys-color-shadow-dark: #000000;
+
+  /* Aliases para o tema ativo (Light por padrão) */
+  --md-sys-color-primary: var(--md-sys-color-primary-light);
+  --md-sys-color-on-primary: var(--md-sys-color-onprimary-light);
+  --md-sys-color-primary-container: var(--md-sys-color-primarycontainer-light);
+  --md-sys-color-on-primary-container: var(--md-sys-color-onprimarycontainer-light);
+  --md-sys-color-secondary: var(--md-sys-color-secondary-light);
+  --md-sys-color-on-secondary: var(--md-sys-color-onsecondary-light);
+  --md-sys-color-secondary-container: var(--md-sys-color-secondarycontainer-light);
+  --md-sys-color-on-secondary-container: var(--md-sys-color-onsecondarycontainer-light);
+  --md-sys-color-tertiary: var(--md-sys-color-tertiary-light);
+  --md-sys-color-on-tertiary: var(--md-sys-color-ontertiary-light);
+  --md-sys-color-tertiary-container: var(--md-sys-color-tertiarycontainer-light);
+  --md-sys-color-on-tertiary-container: var(--md-sys-color-ontertiarycontainer-light);
+  --md-sys-color-error: var(--md-sys-color-error-light);
+  --md-sys-color-on-error: var(--md-sys-color-onerror-light);
+  --md-sys-color-error-container: var(--md-sys-color-errorcontainer-light);
+  --md-sys-color-on-error-container: var(--md-sys-color-onerrorcontainer-light);
+  --md-sys-color-surface: var(--md-sys-color-surface-light);
+  --md-sys-color-on-surface: var(--md-sys-color-onsurface-light);
+  --md-sys-color-surface-variant: var(--md-sys-color-surfacecontainer-light);
+  --md-sys-color-on-surface-variant: var(--md-sys-color-onsurfacevariant-light);
+  --md-sys-color-outline: var(--md-sys-color-outline-light);
+  --md-sys-color-background: var(--md-sys-color-surface-light);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -30,8 +136,9 @@ body {
 
 .dashboard-container {
   display: flex;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Sidebar / Navigation Drawer */
@@ -87,14 +194,40 @@ body {
 
 .fab-add:hover { transform: translateY(-5px); background: #000; }
 
-/* Link Patient Form */
+/* Link Patient Layout */
+.link-patient-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.link-patient-col {
+  flex: 1;
+  min-width: 280px;
+}
+
+.link-patient-col-right {
+  padding-left: 24px;
+  border-left: 1px solid var(--md-sys-color-surface-variant);
+}
+
 .link-patient-form {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-end;
+  margin-top: 16px;
 }
 .link-patient-form .md-text-field {
-  max-width: 300px;
+  flex: 1;
+  margin-bottom: 0;
+}
+.link-patient-form .btn-submit {
+  height: 56px;
+  width: 110px;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 /* Responsive Adjustments */
@@ -152,12 +285,13 @@ body {
   .app-bar { 
     padding: 16px; 
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: 12px;
   }
   
   .user-profile {
-      align-self: flex-end;
+      align-self: center;
   }
 
   .sections-container { 
@@ -168,7 +302,74 @@ body {
     grid-template-columns: 1fr; 
   }
 
+  .link-patient-col {
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .card-title, .section-title {
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 16px;
+    font-weight: 400;
+  }
+  
+  .patient-header {
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .patient-name-info {
+    width: 100%;
+    max-width: 10%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .patient-name-info h3 {
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .patient-actions {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .patient-actions .md-button {
+    width: 90%;
+  }
+  
+  .patient-actions .md-button.text {
+    width: auto;
+  }
+
   /* Make form vertical on mobile */
+  .link-patient-container {
+    flex-direction: column;
+    gap: 32px;
+  }
+  
+  .link-patient-col-right {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 24px;
+    border-top: 1px solid var(--md-sys-color-surface-variant);
+  }
+
   .link-patient-form {
     flex-direction: column;
     align-items: stretch;
@@ -176,7 +377,7 @@ body {
   }
 
   .link-patient-form .md-text-field,
-  .link-patient-form .md-button {
+  .link-patient-form .btn-submit {
     max-width: 100%;
     width: 100%;
   }
@@ -198,6 +399,10 @@ body {
 
   .modal-content {
       padding: 20px;
+  }
+  
+  .md-card {
+    padding: 16px;
   }
 }
 .sidebar-nav {
@@ -249,6 +454,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
 
@@ -298,6 +504,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.dashboard-section {
+  display: none;
+}
+
+.dashboard-section.active {
+  display: block;
 }
 
 .section {
