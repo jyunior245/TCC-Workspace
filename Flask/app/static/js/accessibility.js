@@ -9,6 +9,7 @@ const AccessibilityService = (() => {
     const IGNORED_TAGS = ['BODY', 'HTML', 'SCRIPT', 'STYLE', 'NOSCRIPT', 'MAIN', 'SECTION', 'NAV', 'ASIDE', 'HEADER', 'FOOTER', 'ARTICLE'];
 
     function init() {
+        if (!synth) return;
         const loadVoices = () => {
             const voices = synth.getVoices();
             // Prioritize the same voice as the AI agent (Antônio/Antonio)
@@ -167,7 +168,7 @@ const AccessibilityService = (() => {
     }
 
     function speak(text) {
-        if (!text) return;
+        if (!text || !synth) return;
         const now = Date.now();
         if (text === lastSpeakText && (now - lastSpeakTime < 1500)) return;
 
@@ -226,7 +227,7 @@ const AccessibilityService = (() => {
         isEnabled: () => isEnabled,
         setPaused: (paused) => {
             isPaused = paused;
-            if (paused) synth.cancel();
+            if (paused && synth) synth.cancel();
             console.log("Accessibility Service Paused:", paused);
         },
         updateToggleUI: updateToggleUI

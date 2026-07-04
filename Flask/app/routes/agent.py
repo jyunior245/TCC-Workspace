@@ -7,6 +7,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from app.utils.decorators import agent_required
 from app.repositories.daily_report_repository import DailyReportRepository
+from app.repositories.chat_history_repository import ChatHistoryRepository
 import logging
 import markdown
 from flask_weasyprint import HTML, render_pdf
@@ -73,28 +74,35 @@ def generate_recovery_link(patient_id):
 @agent_bp.route('/generate_report/<patient_id>', methods=['POST'])
 @agent_required
 def generate_report(patient_id):
-    # Fuso horário do Brasil para evitar virada prematura do dia no servidor UTC (Docker)
-    br_tz = timezone(timedelta(hours=-3))
-    today = datetime.now(br_tz).date()
-    
-    # Check if report already exists for today
-    existing = DailyReportRepository.get_by_patient_and_date(patient_id, today)
-    if existing:
-        return jsonify({
-            "success": False, 
-            "message": "Já existe um relatório gerado para este paciente hoje.",
-            "already_exists": True,
-            "report": existing.content
-        })
-
     # Valida se o paciente pertence a este ACS
     agent_id = session['user_id']
     patient = UserRepository.get_user_by_id(patient_id)
     if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
         return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
 
-    # Gera o relatório usando a IA
-    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id)
+    # Fuso horário do Brasil para evitar virada prematura do dia no servidor UTC (Docker)
+    br_tz = timezone(timedelta(hours=-3))
+    
+    # Busca a data da última interação registrada
+    recent_chats = ChatHistoryRepository.get_recent_chats(patient_id, limit=1)
+    if not recent_chats:
+        return jsonify({"success": False, "message": "Não há interações registradas para este paciente."})
+        
+    last_chat_utc = recent_chats[0].timestamp.replace(tzinfo=timezone.utc)
+    target_date = last_chat_utc.astimezone(br_tz).date()
+    
+    # Check if report already exists for that date
+    existing = DailyReportRepository.get_by_patient_and_date(patient_id, target_date)
+    if existing:
+        return jsonify({
+            "success": False, 
+            "message": f"Já existe um relatório gerado referente às interações do dia {target_date.strftime('%d/%m/%Y')}.",
+            "already_exists": True,
+            "report": existing.content
+        })
+
+    # Gera o relatório usando a IA passando a data exata da última conversa
+    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id, target_date=target_date)
 
     if report_content:
         return jsonify({"success": True, "message": status_message, "report": report_content})
@@ -109,7 +117,15 @@ def update_report(patient_id):
     if not patient or not patient.patient_profile or patient.patient_profile.agent_id != agent_id:
         return jsonify({"success": False, "message": "Paciente não vinculado."}), 403
 
-    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id, update_existing=True)
+    br_tz = timezone(timedelta(hours=-3))
+    recent_chats = ChatHistoryRepository.get_recent_chats(patient_id, limit=1)
+    if not recent_chats:
+        return jsonify({"success": False, "message": "O paciente não possui interações registradas."})
+        
+    last_chat_utc = recent_chats[0].timestamp.replace(tzinfo=timezone.utc)
+    target_date = last_chat_utc.astimezone(br_tz).date()
+
+    report_content, status_message = current_app.extensions['services'].health_agent.generate_daily_report(patient_id, target_date=target_date, update_existing=True)
 
     if report_content:
         return jsonify({"success": True, "message": status_message, "report": report_content})

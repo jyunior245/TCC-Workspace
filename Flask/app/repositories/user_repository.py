@@ -163,10 +163,27 @@ class UserRepository:
             # 2. Apagar históricos de chat pendentes referentes a esse usuário
             ChatHistory.query.filter_by(user_id=user_id).delete()
             
+            # Apagar contexto de IA (se existir, referenciado por users.id)
+            from app.models.patient_context import PatientContext
+            PatientContext.query.filter_by(patient_id=user_id).delete()
+            
             # 3. Apagar o perfil complementar associado
             if user.user_type == 'patient':
+                # Apagar relatórios diários do paciente
+                from app.models.daily_report import DailyReport
+                DailyReport.query.filter_by(patient_id=user_id).delete()
+                
                 Patient.query.filter_by(id=user_id).delete()
             elif user.user_type == 'health_agent':
+                # Desvincular pacientes desse ACS para não quebrar FK
+                patients = Patient.query.filter_by(agent_id=user_id).all()
+                for p in patients:
+                    p.agent_id = None
+                
+                # Apagar grupos criados por esse agente
+                from app.models.patient_group import PatientGroup
+                PatientGroup.query.filter_by(agent_id=user_id).delete()
+                
                 HealthAgent.query.filter_by(id=user_id).delete()
                 
             # 4. Apagar o usuário mestre

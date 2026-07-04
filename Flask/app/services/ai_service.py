@@ -116,9 +116,17 @@ class HealthAgent:
                 for c in chats_today
             ])
             
+            user_obj = UserRepository.get_user_by_id(patient_id)
+            patient_name = user_obj.name if user_obj else "Desconhecido"
+            date_str = target_date.strftime('%d/%m/%Y')
+            
             summary_prompt = f"""
 Você é um sistema de sumarização clínica para Agentes Comunitários de Saúde (ACS).
 Sua tarefa é ATUALIZAR o Relatório Diário do paciente.
+
+Dados de Contexto:
+- Paciente: {patient_name}
+- Data de Referência: {date_str}
 
 Abaixo você receberá o Relatório Atual e as Novas Conversas.
 Você deve REESCREVER o Relatório Atual incorporando as novas informações nas seções já existentes (ex: adicionando novos sintomas à lista de 'Sintomas Relatados', novos alertas em 'Alerta', etc).
@@ -127,6 +135,7 @@ REGRAS CRÍTICAS:
 1. NÃO crie seções como "Nova Informação", "Estrutura Adicional" ou "Nova Conversa". Apenas reescreva o relatório fundindo os dados orgânicamente no layout base original.
 2. NÃO transcreva e NÃO inclua trechos de diálogo ou o histórico da conversa no relatório final.
 3. Mantenha as informações antigas intactas, apenas ADICIONE os novos dados às categorias correspondentes. A única exceção é se o paciente afirmar que um problema passou (ex: "a dor parou").
+4. OBRIGATÓRIO: Certifique-se de que o campo 'Data:' seja '{date_str}' e 'Paciente:' seja '{patient_name}'. Não use colchetes ou espaços reservados.
 
 Relatório Atual:
 {existing_report.content}
@@ -149,16 +158,27 @@ Retorne APENAS o Relatório Diário completo reescrito:
                 for c in chats_today
             ])
 
+            user_obj = UserRepository.get_user_by_id(patient_id)
+            patient_name = user_obj.name if user_obj else "Desconhecido"
+            date_str = target_date.strftime('%d/%m/%Y')
+            
             # Prompt para sumarização clínica inicial
             summary_prompt = f"""
 Você é um sistema de sumarização clínica projetado para ajudar Agentes Comunitários de Saúde (ACS).
-Analise o seguinte histórico de chat de um paciente hoje e crie um Relatório Diário conciso e estruturado.
+Analise o seguinte histórico de chat de um paciente e crie um Relatório Diário conciso e estruturado.
+
+Dados de Contexto:
+- Paciente: {patient_name}
+- Data de Referência: {date_str}
 
 Diretrizes para o Relatório:
 1. FOCO NA SAÚDE: Destaque quaisquer sintomas relatados, dores, medicamentos mencionados ou queixas.
 2. SINAIS DE ALERTA: Se houver indícios de gravidade (emergências, dores agudas, confusão), inicie o relatório com um [ALERTA] bem claro.
 3. CONTEXTO SOCIAL: Mencione brevemente o estado emocional ou necessidades sociais, se o paciente relatou.
 4. FORMATO: Use Markdown (bullet points, **negrito** para termos chave) para facilitar a leitura rápida do ACS.
+5. OBRIGATÓRIO: Preencha o cabeçalho do relatório com:
+   Data: {date_str}
+   Paciente: {patient_name}
 
 Histórico das Conversas de Hoje:
 {conversation_transcript}
@@ -453,7 +473,7 @@ JSON gerado:
 
     
     def _build_chat_messages(self, message, intent, context, last_chats, sources=None, user_id=None):
-        system_rules = "Você é um assistente de saúde empático para idosos."
+        system_rules = "Você é um assistente de saúde empático para idosos. REGRA ABSOLUTA E INQUEBRÁVEL: É TERMINANTEMENTE PROIBIDO realizar diagnósticos médicos ou recomendar, prescrever e sugerir qualquer tipo de medicação ou tratamento medicamentoso. O seu papel é EXCLUSIVAMENTE orientar e recomendar que o paciente procure um profissional de saúde presencialmente em uma Unidade Básica de Saúde (UBS)."
 
         # Injeção de Janela de Contexto (KB) - Memória de Longo Prazo
         if user_id:
