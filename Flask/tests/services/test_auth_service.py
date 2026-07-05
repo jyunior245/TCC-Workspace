@@ -144,3 +144,268 @@ def test_send_verification_for_new_email(mocker):
     
     assert result is True
     assert mock_requests.post.call_count == 2
+
+def test_send_password_reset_email_success(mocker):
+    '''Teste de envio de email de recuperação de senha com sucesso.'''
+    mock_auth = mocker.patch('app.services.auth_service.auth')
+    AuthService.send_password_reset_email("test@test.com")
+    mock_auth.send_password_reset_email.assert_called_once_with("test@test.com")
+
+def test_send_password_reset_email_failure(mocker):
+    '''Teste de envio de email de recuperação de senha sem sucesso'''
+    mock_auth = mocker.patch('app.services.auth_service.auth')
+    error_json = json.dumps({"error": {"message": "USER_NOT_FOUND"}})
+    mock_auth.send_password_reset_email.side_effect = DummyPyrebaseError(error_json)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_password_reset_email("test@test.com")
+    
+    assert str(excinfo.value) == "Usuário não encontrado."
+
+def test_admin_update_user_password_success(mocker):
+    '''Teste de atualização de senha via Admin SDK com sucesso.'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    
+    result = AuthService.admin_update_user_password("uid_123", "novasenha")
+    
+    assert result is True
+    mock_auth_admin.update_user.assert_called_once_with("uid_123", password="novasenha")
+
+def test_admin_update_user_password_no_admin_sdk(mocker):
+    '''Teste de atualização de senha via Admin SDK sem Admin SDK'''
+    mocker.patch('app.services.auth_service.auth_admin', None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.admin_update_user_password("uid_123", "novasenha")
+        
+    assert "Admin SDK not configured" in str(excinfo.value)
+
+def test_admin_update_user_password_failure(mocker):
+    '''Teste de atualização de senha via Admin SDK sem sucesso'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.update_user.side_effect = DummyFirebaseAdminError("Erro ao atualizar")
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.admin_update_user_password("uid_123", "novasenha")
+        
+    assert "Erro Administrativo Firebase" in str(excinfo.value)
+
+def test_delete_user_by_uid_success(mocker):
+    '''Teste de deleção de usuário via Admin SDK com sucesso.'''    
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    AuthService.delete_user_by_uid("uid_123")
+    mock_auth_admin.delete_user.assert_called_once_with("uid_123")
+
+def test_delete_user_by_uid_no_admin_sdk(mocker):
+    '''Teste de deleção de usuário sem Admin SDK'''
+    mocker.patch('app.services.auth_service.auth_admin', None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.delete_user_by_uid("uid_123")
+        
+    assert "Admin SDK not configured" in str(excinfo.value)
+
+def test_delete_user_by_uid_failure(mocker):
+    '''Teste de deleção de usuário sem sucesso.'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.delete_user.side_effect = DummyFirebaseAdminError("Usuário não existe")
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.delete_user_by_uid("uid_123")
+        
+    assert "Erro Administrativo Firebase" in str(excinfo.value)
+
+def test_send_initial_verification_email_success(mocker):
+    '''Teste de envio de email de verificação inicial.'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value="fake_api_key")
+    
+    mock_requests = mocker.patch('app.services.auth_service.requests')
+    
+    mock_res_token = mocker.MagicMock()
+    mock_res_token.status_code = 200
+    mock_res_token.json.return_value = {'idToken': 'id_token_123'}
+    
+    mock_res_verify = mocker.MagicMock()
+    mock_res_verify.status_code = 200
+    
+    mock_requests.post.side_effect = [mock_res_token, mock_res_verify]
+    
+    result = AuthService.send_initial_verification_email("uid_123")
+    
+    assert result is True
+    assert mock_requests.post.call_count == 2
+
+def test_send_initial_verification_email_no_admin_sdk(mocker):
+    '''Teste de envio de email de verificação inicial sem Admin SDK'''
+    mocker.patch('app.services.auth_service.auth_admin', None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_initial_verification_email("uid_123")
+        
+    assert "Admin SDK not configured" in str(excinfo.value)
+
+def test_send_initial_verification_email_no_api_key(mocker):
+    '''Teste de envio de email de verificação inicial sem API KEY'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value=None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_initial_verification_email("uid_123")
+        
+    assert "FIREBASE_API_KEY" in str(excinfo.value)
+
+def test_send_initial_verification_email_first_post_fails(mocker):
+    '''Teste de envio de email de verificação inicial com falha no primeiro post'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value="fake_api_key")
+    
+    mock_requests = mocker.patch('app.services.auth_service.requests')
+    
+    mock_res_token = mocker.MagicMock()
+    mock_res_token.status_code = 400
+    mock_res_token.text = "Bad Request"
+    
+    mock_requests.post.side_effect = [mock_res_token]
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_initial_verification_email("uid_123")
+        
+    assert "Falha ao obter ID Token" in str(excinfo.value)
+
+def test_send_initial_verification_email_second_post_fails(mocker):
+    '''Teste de envio de email de verificação inicial com falha no segundo post'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value="fake_api_key")
+    
+    mock_requests = mocker.patch('app.services.auth_service.requests')
+    
+    mock_res_token = mocker.MagicMock()
+    mock_res_token.status_code = 200
+    mock_res_token.json.return_value = {'idToken': 'id_token_123'}
+    
+    mock_res_verify = mocker.MagicMock()
+    mock_res_verify.status_code = 400
+    mock_res_verify.text = "Error sending email"
+    
+    mock_requests.post.side_effect = [mock_res_token, mock_res_verify]
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_initial_verification_email("uid_123")
+        
+    assert "Falha ao enviar e-mail de verificação" in str(excinfo.value)
+
+def test_login_firebase_user_failure(mocker):
+    '''Teste de login via Firebase com falha.'''
+    mock_auth = mocker.patch('app.services.auth_service.auth')
+    error_json = json.dumps({"error": {"message": "INVALID_PASSWORD"}})
+    mock_auth.sign_in_with_email_and_password.side_effect = DummyPyrebaseError(error_json)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.login_firebase_user("test@test.com", "wrong_password")
+        
+    assert str(excinfo.value) == "Senha incorreta."
+
+def test_create_firebase_user_admin_sdk_failure(mocker):
+    '''Teste de criação de usuário via Admin SDK sem sucesso.'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_user.side_effect = DummyFirebaseAdminError("Erro ao criar usuário")
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.create_firebase_user("test@test.com", "123456")
+        
+    assert "Erro Administrativo Firebase" in str(excinfo.value)
+
+def test_admin_update_user_email_no_admin_sdk(mocker):
+    '''Teste de atualização de e-mail via Admin SDK sem Admin SDK'''
+    mocker.patch('app.services.auth_service.auth_admin', None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.admin_update_user_email("uid_123", "novo@email.com")
+        
+    assert "Admin SDK not configured" in str(excinfo.value)
+
+def test_admin_update_user_email_failure(mocker):
+    '''Teste de atualização de e-mail via Admin SDK sem sucesso'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.update_user.side_effect = DummyFirebaseAdminError("Erro ao atualizar e-mail")
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.admin_update_user_email("uid_123", "novo@email.com")
+        
+    assert "Erro Administrativo Firebase" in str(excinfo.value)
+
+def test_send_verification_for_new_email_no_admin_sdk(mocker):
+    '''Teste de envio de verificação de e-mail sem Admin SDK'''
+    mocker.patch('app.services.auth_service.auth_admin', None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_verification_for_new_email("uid_123", "novo@email.com")
+        
+    assert "Admin SDK not configured" in str(excinfo.value)
+
+def test_send_verification_for_new_email_no_api_key(mocker):
+    '''Teste de envio de verificação de e-mail sem API KEY'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value=None)
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_verification_for_new_email("uid_123", "novo@email.com")
+        
+    assert "FIREBASE_API_KEY" in str(excinfo.value)
+
+def test_send_verification_for_new_email_first_post_fails(mocker):
+    '''Teste de envio de verificação de e-mail sem sucesso no primeiro post'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value="fake_api_key")
+    
+    mock_requests = mocker.patch('app.services.auth_service.requests')
+    
+    mock_res_token = mocker.MagicMock()
+    mock_res_token.status_code = 400
+    mock_res_token.text = "Bad Request"
+    
+    mock_requests.post.side_effect = [mock_res_token]
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_verification_for_new_email("uid_123", "novo@email.com")
+        
+    assert "Falha ao obter ID Token" in str(excinfo.value)
+
+def test_send_verification_for_new_email_second_post_fails(mocker):
+    '''Teste de envio de verificação de e-mail sem sucesso no segundo post'''
+    mock_auth_admin = mocker.patch('app.services.auth_service.auth_admin')
+    mock_auth_admin.create_custom_token.return_value = b'custom_token_123'
+    mocker.patch('app.services.auth_service.os.getenv', return_value="fake_api_key")
+    
+    mock_requests = mocker.patch('app.services.auth_service.requests')
+    
+    mock_res_token = mocker.MagicMock()
+    mock_res_token.status_code = 200
+    mock_res_token.json.return_value = {'idToken': 'id_token_123'}
+    
+    mock_res_verify = mocker.MagicMock()
+    mock_res_verify.status_code = 400
+    mock_res_verify.text = "Error sending email"
+    
+    mock_requests.post.side_effect = [mock_res_token, mock_res_verify]
+    
+    with pytest.raises(Exception) as excinfo:
+        AuthService.send_verification_for_new_email("uid_123", "novo@email.com")
+        
+    assert "Falha ao enviar e-mail de verificação" in str(excinfo.value)
+
+def test_delete_firebase_user_failure(mocker, caplog):
+    '''Teste de remoção de usuário Firebase com falha.'''
+    mock_auth = mocker.patch('app.services.auth_service.auth')
+    mock_auth.delete_user_account.side_effect = Exception("Network Error")
+    
+    AuthService.delete_firebase_user("token123")
+    
+    assert "Failed to rollback Firebase user: Network Error" in caplog.text
